@@ -13,12 +13,14 @@
         <module>shared</module>
         <module>forge-server</module>
         <module>forge-runner</module>
+        <module>forge-e2e</module>
     </modules>
 
     <properties>
         <java.version>25</java.version>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>3.5.0</spring-boot.version>
         <testcontainers.version>1.21.3</testcontainers.version>
@@ -53,6 +55,11 @@
                 <artifactId>docker-java-transport-httpclient5</artifactId>
                 <version>${docker-java.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.github.docker-java</groupId>
+                <artifactId>docker-java-transport-zerodep</artifactId>
+                <version>${docker-java.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -63,6 +70,13 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring-boot.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <parameters>true</parameters>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

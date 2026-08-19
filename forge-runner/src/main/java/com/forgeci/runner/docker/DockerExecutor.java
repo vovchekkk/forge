@@ -3,6 +3,7 @@ package com.forgeci.runner.docker;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.model.AccessMode;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.PullResponseItem;
@@ -145,7 +146,7 @@ public class DockerExecutor {
                                    String hostWorkspace) {
         Volume volume = new Volume(WORKSPACE_DIR);
         HostConfig hostConfig = HostConfig.newHostConfig()
-                .withBinds(new Bind(hostWorkspace, volume, true))
+                .withBinds(new Bind(hostWorkspace, volume, AccessMode.rw))
                 .withPrivileged(false)
                 .withAutoRemove(false);
 

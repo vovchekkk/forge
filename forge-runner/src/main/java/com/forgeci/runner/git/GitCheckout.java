@@ -88,16 +88,40 @@ public class GitCheckout {
     }
 
     private void deleteRecursively(Path path) throws IOException {
-        if (Files.isDirectory(path)) {
-            try (var stream = Files.walk(path)) {
-                stream.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
-                    try {
-                        Files.deleteIfExists(p);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+        if (!Files.isDirectory(path)) {
+            return;
+        }
+        IOException last = null;
+        for (int attempt = 0; attempt < 5; attempt++) {
+            try {
+                try (var stream = Files.walk(path)) {
+                    stream.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                        try {
+                            Files.deleteIfExists(p);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                }
+                return;
+            } catch (RuntimeException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof IOException io) {
+                    last = io;
+                } else {
+                    throw e;
+                }
+            }
+            if (attempt == 0) {
+                System.gc();
+            }
+            try {
+                Thread.sleep(100L * (attempt + 1));
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw last;
             }
         }
+        throw last;
     }
 }
