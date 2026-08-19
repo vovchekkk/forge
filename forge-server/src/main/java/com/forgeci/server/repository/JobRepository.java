@@ -42,6 +42,6 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
             "where pr.status in ('QUEUED','RUNNING') " +
             "and j.status = 'READY' and j.runner_id is null " +
             "order by j.created_at asc " +
-            "for update skip locked limit 1", nativeQuery = true)
+            "for update of j skip locked limit 1", nativeQuery = true)
     Optional<JobEntity> claimNextJob();
 }
