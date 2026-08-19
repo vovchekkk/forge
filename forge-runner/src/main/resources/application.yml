@@ -11,8 +11,11 @@ forge:
     token: ${FORGE_SERVER_TOKEN:local-dev-token}
   runner:
     name: ${FORGE_RUNNER_NAME:local-runner}
-    workspace: ${FORGE_RUNNER_WORKSPACE:C:\Users\vl_ga\AppData\Local\Temp\forge-runner-workspace}
+    workspace: ${FORGE_RUNNER_WORKSPACE:${user.home}/forge-runner-workspace}
     poll-interval: 2s
+  git:
+    username: ${FORGE_GIT_USERNAME:}
+    password: ${FORGE_GIT_PASSWORD:}
 
 logging:
   level:

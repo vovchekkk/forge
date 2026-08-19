@@ -13,26 +13,27 @@ repository and run each job step in a container.
 | `shared`        | Pipeline model, YAML parser, validator and the server/runner protocol DTOs |
 | `forge-server`  | Spring Boot server: projects, pipelines, runs, runner registry, scheduler |
 | `forge-runner`  | Spring Boot agent: polls the server, clones repos, executes jobs in Docker |
+| `forge-e2e`     | End-to-end tests: full pipeline against real Postgres, Docker and a runner |
 
 ## Pipeline DSL
 
 ```yaml
 name: build-and-test
+image: maven:3.9-eclipse-temurin-25
 jobs:
-  - name: build
-    image: maven:3.9-eclipse-temurin-25
-    script:
+  build:
+    commands:
       - mvn -q clean package
-  - name: test
-    image: maven:3.9-eclipse-temurin-25
-    depends_on:
-      - build
-    script:
+  test:
+    needs: [build]
+    commands:
       - mvn -q test
 ```
 
-Job execution order is derived from the `depends_on` graph (DAG) on the server
-side. Runs are driven by a state machine (`PENDING → QUEUED → RUNNING → …`).
+Job execution order is derived from the `needs` graph (DAG) on the server
+side. Each job can also set `timeout` (seconds) and `environment` (map of
+env vars). Runs are driven by a state machine
+(`PENDING → QUEUED → RUNNING → SUCCESS/FAILED/CANCELED`).
 
 ## Getting started
 
@@ -58,3 +59,9 @@ Interactive API docs are available at `http://localhost:8080/swagger-ui.html`.
 mvn -pl shared test
 mvn -pl forge-server test   # integration tests spin up PostgreSQL via Testcontainers
 ```
+
+## Deployment
+
+See [docs/deploy.md](docs/deploy.md) for a step-by-step guide to deploying a
+self-hosted instance with Docker Compose and HTTPS (Caddy): domain purchase,
+VPS selection, Docker setup, and end-to-end verification.

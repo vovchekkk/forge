@@ -129,7 +129,8 @@ class EndToEndPipelineTest {
         Path workspaceRoot = Files.createTempDirectory("forge-e2e-workspace");
         ForgeRunnerProperties properties = new ForgeRunnerProperties(
                 new ForgeRunnerProperties.Server("http://localhost:" + port, token),
-                new ForgeRunnerProperties.Runner("e2e-runner", workspaceRoot.toString()));
+                new ForgeRunnerProperties.Runner("e2e-runner", workspaceRoot.toString()),
+                new ForgeRunnerProperties.Git(null, null));
         return new JobRunner(
                 new ServerApiClient(properties),
                 new GitCheckout(),

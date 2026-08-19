@@ -5,7 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "forge")
 public record ForgeRunnerProperties(
         Server server,
-        Runner runner) {
+        Runner runner,
+        Git git) {
 
     public record Server(
             String url,
@@ -14,4 +15,8 @@ public record ForgeRunnerProperties(
     public record Runner(
             String name,
             String workspace) {}
+
+    public record Git(
+            String username,
+            String password) {}
 }

@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: forge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-forge}
+      POSTGRES_USER: ${POSTGRES_USER:-forge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge}
+    volumes:
+      - forge-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forge} -d ${POSTGRES_DB:-forge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - forge-net
+
+  forge-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    container_name: forge-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-forge}
+      DB_USER: ${POSTGRES_USER:-forge}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-forge}
+      SPRING_PROFILES_ACTIVE: prod
+    ports:
+      - "8080:8080"
+    networks:
+      - forge-net
+
+  forge-runner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.runner
+    container_name: forge-runner
+    restart: unless-stopped
+    depends_on:
+      forge-server:
+        condition: service_started
+    environment:
+      FORGE_SERVER_URL: http://forge-server:8080
+      FORGE_SERVER_TOKEN: ${FORGE_SERVER_TOKEN:-local-dev-token}
+      FORGE_RUNNER_NAME: docker-runner
+      FORGE_RUNNER_WORKSPACE: /srv/forge/workspaces
+      FORGE_GIT_USERNAME: ${FORGE_GIT_USERNAME:-}
+      FORGE_GIT_PASSWORD: ${FORGE_GIT_PASSWORD:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${FORGE_WORKSPACE_DIR:-/srv/forge/workspaces}:/srv/forge/workspaces
+    networks:
+      - forge-net
+
+  caddy:
+    image: caddy:2
+    container_name: forge-caddy
+    restart: unless-stopped
+    depends_on:
+      forge-server:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+    networks:
+      - forge-net
+
+volumes:
+  forge-postgres-data:
+  caddy-data:
+
+networks:
+  forge-net:
+    driver: bridge

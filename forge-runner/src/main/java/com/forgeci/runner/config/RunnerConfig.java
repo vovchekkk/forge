@@ -16,7 +16,12 @@ public class RunnerConfig {
     }
 
     @Bean
-    public GitCheckout gitCheckout() {
+    public GitCheckout gitCheckout(ForgeRunnerProperties properties) {
+        String username = properties.git() == null ? null : properties.git().username();
+        String password = properties.git() == null ? null : properties.git().password();
+        if (username != null && password != null) {
+            return new GitCheckout(username, password);
+        }
         return new GitCheckout();
     }
 

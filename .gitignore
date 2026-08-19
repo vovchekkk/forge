@@ -41,3 +41,8 @@ graphify-out/
 *.db-shm
 *.db-wal
 ruvector.db
+claude-flow.config.json
+data/
+
+# Deploy secrets (copy .env.example to .env)
+.env
