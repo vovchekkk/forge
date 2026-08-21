@@ -139,7 +139,7 @@ On your PC:
 
 ```bash
 # 1. Clone the repo
-git clone git@github.com:vovchekkk/forge.git
+git clone git@github.com:vovchekkk/forge-ci.git
 cd forge
 
 # 2. Configure the runner
