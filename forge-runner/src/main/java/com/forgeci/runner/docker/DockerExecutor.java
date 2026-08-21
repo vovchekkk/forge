@@ -168,6 +168,16 @@ public class DockerExecutor {
         throw last;
     }
 
+    /** Default Maven JVM args injected into every job so dependency downloads
+     *  survive flaky networks without each project carrying its own config. */
+    static final String DEFAULT_MAVEN_OPTS =
+            "-Daether.transport.http.retry.handler.count=5 "
+                    + "-Daether.transport.http.retry.handler.firstDelay=500 "
+                    + "-Daether.transport.http.retry.handler.maxDelay=5000 "
+                    + "-Dmaven.resolver.transport.retryCount=5 "
+                    + "-Dmaven.resolver.transport.retryFirstInterval=500 "
+                    + "-Dmaven.resolver.transport.retryMaxInterval=5000";
+
     private String createContainer(String image, String command, Map<String, String> environment,
                                    String hostWorkspace) {
         Volume volume = new Volume(WORKSPACE_DIR);
@@ -190,13 +200,22 @@ public class DockerExecutor {
                 .withWorkingDir(workingDir)
                 .withCmd("/bin/sh", "-lc", command)
                 .withHostConfig(hostConfig);
-        if (environment != null && !environment.isEmpty()) {
-            List<String> env = environment.entrySet().stream()
-                    .map(e -> e.getKey() + "=" + e.getValue())
-                    .toList();
-            cmd.withEnv(env);
+        List<String> env = new ArrayList<>();
+        if (environment != null) {
+            environment.forEach((k, v) -> env.add(k + "=" + v));
         }
+        env.add("MAVEN_OPTS=" + mavenOpts(environment));
+        cmd.withEnv(env);
         return cmd.exec().getId();
+    }
+
+    /** Combines the job's own MAVEN_OPTS with the injected retry flags. */
+    static String mavenOpts(Map<String, String> environment) {
+        String jobOpts = environment == null ? null : environment.get("MAVEN_OPTS");
+        if (jobOpts == null || jobOpts.isBlank()) {
+            return DEFAULT_MAVEN_OPTS;
+        }
+        return jobOpts + " " + DEFAULT_MAVEN_OPTS;
     }
 
     private void removeContainer(String containerId) {

@@ -152,6 +152,25 @@ class DockerExecutorTest {
     }
 
     @Test
+    void mavenOptsInjectedByDefault() {
+        String opts = DockerExecutor.mavenOpts(Map.of());
+        assertThat(opts).contains("aether.transport.http.retry.handler.count=5");
+        assertThat(opts).contains("maven.resolver.transport.retryCount=5");
+    }
+
+    @Test
+    void mavenOptsMergesWithJobProvidedValue() {
+        String opts = DockerExecutor.mavenOpts(Map.of("MAVEN_OPTS", "-Xmx2g"));
+        assertThat(opts).startsWith("-Xmx2g");
+        assertThat(opts).contains("aether.transport.http.retry.handler.count=5");
+    }
+
+    @Test
+    void mavenOptsOnlyDefaultWhenJobOmitsIt() {
+        assertThat(DockerExecutor.mavenOpts(null)).isEqualTo(DockerExecutor.DEFAULT_MAVEN_OPTS);
+    }
+
+    @Test
     void workspaceIsBoundIntoContainer() throws Exception {
         java.nio.file.Path ws = java.nio.file.Files.createTempDirectory("forge-ws");
         java.nio.file.Files.writeString(ws.resolve("payload.txt"), "bound-content");
