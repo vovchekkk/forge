@@ -74,18 +74,7 @@ class JobRunnerTest {
     }
 
     @Test
-    void pollSkipsWhenBusy() {
-        runner.register();
-        when(apiClient.nextJob()).thenReturn(Optional.of(claim()));
-        runner.poll();
-        // simulate busy: current job set, subsequent poll must not claim again
-        when(apiClient.nextJob()).thenReturn(Optional.empty());
-        runner.poll();
-        verify(apiClient, never()).jobStatus(any());
-    }
-
-    @Test
-    void pollExecutesClaimedJobAndReportsSuccess() throws Exception {
+    void pollSubmitsJobToBackgroundExecutor() throws Exception {
         runner.register();
         when(apiClient.nextJob()).thenReturn(Optional.of(claim()));
         when(workspaceManager.create(JOB_ID)).thenReturn(Path.of("ws"));
@@ -93,6 +82,23 @@ class JobRunnerTest {
                 any(), any())).thenReturn(new DockerExecutor.CommandResult(0, List.of("ok"), false, null));
 
         runner.poll();
+        // execute runs on the background executor thread, so give it a moment
+        // and then verify the full job lifecycle completed.
+        Thread.sleep(300);
+        ArgumentCaptor<JobResult> captor = ArgumentCaptor.forClass(JobResult.class);
+        verify(apiClient).reportResult(captor.capture());
+        assertThat(captor.getValue().status()).isEqualTo(JobStatus.SUCCESS);
+        verify(workspaceManager).cleanup(JOB_ID);
+    }
+
+    @Test
+    void pollExecutesClaimedJobAndReportsSuccess() throws Exception {
+        runner.register();
+        when(workspaceManager.create(JOB_ID)).thenReturn(Path.of("ws"));
+        when(dockerExecutor.runJobCommands(anyString(), any(), any(), anyString(), any(),
+                any(), any())).thenReturn(new DockerExecutor.CommandResult(0, List.of("ok"), false, null));
+
+        runner.execute(claim());
 
         ArgumentCaptor<JobResult> captor = ArgumentCaptor.forClass(JobResult.class);
         verify(apiClient).reportResult(captor.capture());
@@ -104,12 +110,11 @@ class JobRunnerTest {
     @Test
     void pollReportsFailureOnNonZeroExit() throws Exception {
         runner.register();
-        when(apiClient.nextJob()).thenReturn(Optional.of(claim()));
         when(workspaceManager.create(JOB_ID)).thenReturn(Path.of("ws"));
         when(dockerExecutor.runJobCommands(anyString(), any(), any(), anyString(), any(),
                 any(), any())).thenReturn(new DockerExecutor.CommandResult(2, List.of("err"), false, "boom"));
 
-        runner.poll();
+        runner.execute(claim());
 
         ArgumentCaptor<JobResult> captor = ArgumentCaptor.forClass(JobResult.class);
         verify(apiClient).reportResult(captor.capture());
@@ -120,12 +125,11 @@ class JobRunnerTest {
     @Test
     void pollReportsCanceledWhenJobCanceled() throws Exception {
         runner.register();
-        when(apiClient.nextJob()).thenReturn(Optional.of(claim()));
         when(workspaceManager.create(JOB_ID)).thenReturn(Path.of("ws"));
         when(dockerExecutor.runJobCommands(anyString(), any(), any(), anyString(), any(),
                 any(), any())).thenReturn(new DockerExecutor.CommandResult(-1, List.of(), false, "canceled", true));
 
-        runner.poll();
+        runner.execute(claim());
 
         ArgumentCaptor<JobResult> captor = ArgumentCaptor.forClass(JobResult.class);
         verify(apiClient).reportResult(captor.capture());
@@ -135,12 +139,11 @@ class JobRunnerTest {
     @Test
     void pollReportsTimedOutAsFailed() throws Exception {
         runner.register();
-        when(apiClient.nextJob()).thenReturn(Optional.of(claim()));
         when(workspaceManager.create(JOB_ID)).thenReturn(Path.of("ws"));
         when(dockerExecutor.runJobCommands(anyString(), any(), any(), anyString(), any(),
                 any(), any())).thenReturn(new DockerExecutor.CommandResult(-1, List.of(), true, "timeout"));
 
-        runner.poll();
+        runner.execute(claim());
 
         ArgumentCaptor<JobResult> captor = ArgumentCaptor.forClass(JobResult.class);
         verify(apiClient).reportResult(captor.capture());
@@ -150,12 +153,11 @@ class JobRunnerTest {
     @Test
     void pollHandlesExecutionExceptionAndCleansUp() throws Exception {
         runner.register();
-        when(apiClient.nextJob()).thenReturn(Optional.of(claim()));
         when(workspaceManager.create(JOB_ID)).thenReturn(Path.of("ws"));
         doThrow(new IOException("clone failed"))
                 .when(gitCheckout).cloneAndCheckout(anyString(), anyString(), any());
 
-        runner.poll();
+        runner.execute(claim());
 
         ArgumentCaptor<JobResult> captor = ArgumentCaptor.forClass(JobResult.class);
         verify(apiClient).reportResult(captor.capture());

@@ -13,6 +13,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +34,11 @@ public class JobRunner implements DisposableBean {
     private final WorkspaceManager workspaceManager;
     private final String name;
     private final AtomicReference<UUID> currentJob = new AtomicReference<>();
+    private final ExecutorService jobExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "job-executor");
+        t.setDaemon(true);
+        return t;
+    });
     private volatile boolean registered = false;
 
     public JobRunner(ServerApiClient apiClient, GitCheckout gitCheckout, DockerExecutor dockerExecutor,
@@ -44,7 +52,8 @@ public class JobRunner implements DisposableBean {
                 : properties.runner().name();
     }
 
-    /** Periodic poll loop - the runner is not a scheduler, it only picks up work. */
+    /** Picks up the next job and hands it to a background thread so the scheduler
+     *  thread stays free for heartbeats (otherwise long jobs kill the runner). */
     @Scheduled(fixedDelayString = "${forge.runner.poll-interval:5s}")
     public void poll() {
         if (!registered) {
@@ -54,7 +63,7 @@ public class JobRunner implements DisposableBean {
             return;
         }
         Optional<JobClaim> next = apiClient.nextJob();
-        next.ifPresent(this::execute);
+        next.ifPresent(job -> jobExecutor.submit(() -> execute(job)));
     }
 
     @Scheduled(fixedDelayString = "${forge.runner.heartbeat-interval:10s}")
@@ -65,7 +74,8 @@ public class JobRunner implements DisposableBean {
         apiClient.heartbeat(currentJob.get() == null ? RunnerStatus.ONLINE : RunnerStatus.BUSY, currentJob.get());
     }
 
-    private void execute(JobClaim job) {
+    /** Package-visible for tests: call synchronously when needed. */
+    void execute(JobClaim job) {
         currentJob.set(job.jobId());
         apiClient.heartbeat(RunnerStatus.BUSY, job.jobId());
         log.info("Executing job {} ({})", job.jobId(), job.jobName());
@@ -110,6 +120,15 @@ public class JobRunner implements DisposableBean {
         UUID job = currentJob.get();
         if (job != null) {
             log.warn("Shutting down with active job {}", job);
+        }
+        jobExecutor.shutdown();
+        try {
+            if (!jobExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                jobExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            jobExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 }
