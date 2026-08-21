@@ -4,6 +4,7 @@
 FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /build
 COPY pom.xml .
+COPY .mvn .mvn
 COPY shared shared
 COPY forge-server forge-server
 COPY forge-runner forge-runner
@@ -13,7 +14,7 @@ RUN mvn -q -DskipTests -pl forge-runner -am package
 # Runtime stage
 FROM eclipse-temurin:25-jre
 WORKDIR /app
-COPY --from=build /build/forge-runner/target/forge-runner-*.jar app.jar
+COPY --from=build /build/forge-runner/target/forge-runner-*-exec.jar app.jar
 RUN mkdir -p /workspaces
 EXPOSE 9090
 ENTRYPOINT ["java", "-jar", "app.jar"]
