@@ -33,6 +33,7 @@ jobs:
             --exclude='.git' \
             --exclude='.env' \
             --exclude='target' \
+            --exclude='workspaces' \
             --exclude='*.db*' \
             --exclude='.claude-flow' \
             --exclude='.opencode' \

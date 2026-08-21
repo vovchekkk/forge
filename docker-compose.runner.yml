@@ -1,0 +1,19 @@
+services:
+  forge-runner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.runner
+    container_name: forge-runner
+    restart: unless-stopped
+    environment:
+      # Server URL — must be reachable from your PC (Caddy proxies HTTPS → forge-server)
+      FORGE_SERVER_URL: https://forge-ci.ru
+      # Runner credential: obtain from POST /api/runners (shown only once)
+      FORGE_SERVER_TOKEN: ${FORGE_SERVER_TOKEN:?set FORGE_SERVER_TOKEN}
+      FORGE_RUNNER_NAME: ${FORGE_RUNNER_NAME:-pc-runner}
+      FORGE_RUNNER_WORKSPACE: /workspaces
+      FORGE_GIT_USERNAME: ${FORGE_GIT_USERNAME:-}
+      FORGE_GIT_PASSWORD: ${FORGE_GIT_PASSWORD:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${FORGE_WORKSPACE_DIR:-./workspaces}:/workspaces
