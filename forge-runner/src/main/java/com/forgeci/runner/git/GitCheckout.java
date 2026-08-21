@@ -39,19 +39,7 @@ public class GitCheckout {
             }
             Files.createDirectories(workspace.getParent());
 
-            Git git = null;
-            try {
-                git = Git.cloneRepository()
-                        .setURI(repositoryUrl)
-                        .setDirectory(workspace.toFile())
-                        .setCloneAllBranches(true)
-                        .setCredentialsProvider(credentials())
-                        .call();
-            } finally {
-                if (git != null) {
-                    git.close();
-                }
-            }
+            cloneWithRetries(repositoryUrl, workspace);
 
             if (revision != null && !revision.isBlank()) {
                 try (Git git2 = Git.open(workspace.toFile())) {
@@ -62,6 +50,44 @@ public class GitCheckout {
         } catch (GitAPIException e) {
             throw new IOException("Git checkout failed for " + repositoryUrl, e);
         }
+    }
+
+    /** Clone is the network part; retry it on flaky connectivity. Revision
+     *  resolution and checkout stay outside the retry loop, since a missing
+     *  revision is a permanent error, not a transient one. */
+    private void cloneWithRetries(String repositoryUrl, Path workspace) throws IOException {
+        IOException last = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            Git git = null;
+            try {
+                if (Files.exists(workspace)) {
+                    deleteRecursively(workspace);
+                }
+                git = Git.cloneRepository()
+                        .setURI(repositoryUrl)
+                        .setDirectory(workspace.toFile())
+                        .setCloneAllBranches(true)
+                        .setCredentialsProvider(credentials())
+                        .call();
+                return;
+            } catch (GitAPIException e) {
+                last = new IOException("Git clone failed for " + repositoryUrl, e);
+                log.warn("Git clone of {} failed on attempt {}/3: {}", repositoryUrl, attempt, e.getMessage());
+                if (attempt < 3) {
+                    try {
+                        Thread.sleep(1000L * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw last;
+                    }
+                }
+            } finally {
+                if (git != null) {
+                    git.close();
+                }
+            }
+        }
+        throw last;
     }
 
     private String resolveRevision(Repository repository, String revision) throws IOException {

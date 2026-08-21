@@ -10,6 +10,7 @@ import com.forgeci.dto.RunnerRegistrationResponse;
 import com.forgeci.model.JobStatus;
 import com.forgeci.model.RunnerStatus;
 import com.forgeci.runner.config.ForgeRunnerProperties;
+import com.forgeci.runner.support.RetrySupport;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,12 +44,13 @@ public class ServerApiClient {
     }
 
     public UUID register(String name) {
-        RunnerRegistrationResponse response = restClient.post()
-                .uri("/api/runners/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new RunnerRegistrationRequest(name, credential))
-                .retrieve()
-                .body(RunnerRegistrationResponse.class);
+        RunnerRegistrationResponse response = RetrySupport.withRetries(
+                5, 500, 5000, "runner registration", () -> restClient.post()
+                        .uri("/api/runners/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(new RunnerRegistrationRequest(name, credential))
+                        .retrieve()
+                        .body(RunnerRegistrationResponse.class));
         this.runnerId = response.runnerId();
         log.info("Registered runner '{}' with id {}", name, runnerId);
         return runnerId;
@@ -104,14 +106,16 @@ public class ServerApiClient {
 
     public void reportResult(JobResult result) {
         try {
-            withCredential(restClient.post()
-                    .uri("/api/runners/{id}/jobs/{jobId}/result", runnerId, result.jobId())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(result))
-                    .retrieve()
-                    .toBodilessEntity();
+            RetrySupport.withRetriesVoid(5, 500, 5000, "report result for job " + result.jobId(), () -> {
+                withCredential(restClient.post()
+                        .uri("/api/runners/{id}/jobs/{jobId}/result", runnerId, result.jobId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(result))
+                        .retrieve()
+                        .toBodilessEntity();
+            });
         } catch (Exception e) {
-            log.error("Failed to report result for job {}: {}", result.jobId(), e.getMessage());
+            log.error("Failed to report result for job {} after retries: {}", result.jobId(), e.getMessage());
         }
     }
 
