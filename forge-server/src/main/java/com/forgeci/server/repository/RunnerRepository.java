@@ -13,7 +13,9 @@ import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
 public interface RunnerRepository extends JpaRepository<RunnerEntity, UUID> {
-    Optional<RunnerEntity> findByToken(String token);
+    Optional<RunnerEntity> findByCredentialHash(String credentialHash);
+
+    List<RunnerEntity> findByOwner_Id(UUID ownerId);
 
     @Query("select r from RunnerEntity r where r.status <> 'OFFLINE' and r.lastHeartbeatAt < :threshold")
     List<RunnerEntity> findStaleRunners(@Param("threshold") Instant threshold);

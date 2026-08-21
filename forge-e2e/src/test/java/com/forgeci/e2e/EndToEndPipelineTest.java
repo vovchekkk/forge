@@ -17,16 +17,20 @@ import com.forgeci.runner.workspace.WorkspaceManager;
 import com.forgeci.server.application.PipelineRunService;
 import com.forgeci.server.application.PipelineService;
 import com.forgeci.server.application.ProjectService;
+import com.forgeci.server.application.RunnerService;
 import com.forgeci.server.entity.JobEntity;
 import com.forgeci.server.entity.JobLogEntity;
 import com.forgeci.server.entity.PipelineEntity;
 import com.forgeci.server.entity.PipelineRunEntity;
 import com.forgeci.server.entity.ProjectEntity;
 import com.forgeci.server.entity.RunnerEntity;
+import com.forgeci.server.entity.UserEntity;
 import com.forgeci.server.repository.JobLogRepository;
 import com.forgeci.server.repository.JobRepository;
 import com.forgeci.server.repository.PipelineRunRepository;
 import com.forgeci.server.repository.RunnerRepository;
+import com.forgeci.server.repository.UserRepository;
+import com.forgeci.server.security.TokenHashing;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
@@ -45,6 +49,7 @@ import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -74,6 +79,8 @@ class EndToEndPipelineTest {
     @Autowired
     private PipelineRunService runService;
     @Autowired
+    private RunnerService runnerService;
+    @Autowired
     private JobRepository jobRepository;
     @Autowired
     private JobLogRepository jobLogRepository;
@@ -81,6 +88,10 @@ class EndToEndPipelineTest {
     private PipelineRunRepository runRepository;
     @Autowired
     private RunnerRepository runnerRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
@@ -94,16 +105,18 @@ class EndToEndPipelineTest {
     void fullPipelineRunsToSuccessWithRealRunnerAndDocker() throws Exception {
         Path repo = createLocalGitRepo();
 
-        ProjectEntity project = projectService.create("e2e-project", repo.toUri().toString(), "main");
-        PipelineEntity pipeline = pipelineService.create(project.getId(), PIPELINE_CONFIG);
-        PipelineRunEntity run = runService.start(pipeline.getId(), "main");
+        UUID ownerId = createUser();
+        ProjectEntity project = projectService.create(ownerId, "e2e-project", repo.toUri().toString(), "main");
+        PipelineEntity pipeline = pipelineService.create(ownerId, project.getId(), PIPELINE_CONFIG);
+        PipelineRunEntity run = runService.start(ownerId, pipeline.getId(), "main");
         assertEquals(PipelineRunStatus.QUEUED, run.getStatus());
 
-        String token = "e2e-token-" + UUID.randomUUID();
+        RunnerService.RegistrationIssue issue = runnerService.createCredential(ownerId, "e2e-runner");
+        String token = issue.registrationToken();
         JobRunner jobRunner = buildRealRunner(token);
         jobRunner.register();
 
-        RunnerEntity runner = runnerRepository.findByToken(token).orElseThrow();
+        RunnerEntity runner = runnerRepository.findByCredentialHash(TokenHashing.hash(token)).orElseThrow();
         assertEquals(RunnerStatus.ONLINE, runner.getStatus());
 
         PipelineRunEntity finished = awaitTerminal(run.getId(), jobRunner);
@@ -125,6 +138,11 @@ class EndToEndPipelineTest {
         assertNotNull(runRepository.findById(run.getId()).orElseThrow().getFinishedAt());
     }
 
+    private UUID createUser() {
+        UserEntity user = new UserEntity("e2e@forge.local", passwordEncoder.encode("test-password-123"));
+        return userRepository.save(user).getId();
+    }
+
     private JobRunner buildRealRunner(String token) throws IOException {
         Path workspaceRoot = Files.createTempDirectory("forge-e2e-workspace");
         ForgeRunnerProperties properties = new ForgeRunnerProperties(
@@ -135,7 +153,8 @@ class EndToEndPipelineTest {
                 new ServerApiClient(properties),
                 new GitCheckout(),
                 new DockerExecutor(createDockerClient()),
-                new WorkspaceManager(workspaceRoot));
+                new WorkspaceManager(workspaceRoot),
+                properties);
     }
 
     private PipelineRunEntity awaitTerminal(UUID runId, JobRunner jobRunner) throws InterruptedException {

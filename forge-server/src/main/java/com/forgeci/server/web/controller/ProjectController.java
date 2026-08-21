@@ -2,6 +2,7 @@ package com.forgeci.server.web.controller;
 
 import com.forgeci.server.application.ProjectService;
 import com.forgeci.server.entity.ProjectEntity;
+import com.forgeci.server.security.SecurityUtils;
 import com.forgeci.server.web.dto.CreateProjectRequest;
 import com.forgeci.server.web.dto.ProjectResponse;
 import jakarta.validation.Valid;
@@ -29,24 +30,28 @@ public class ProjectController {
 
     @PostMapping
     public ResponseEntity<ProjectResponse> create(@Valid @RequestBody CreateProjectRequest request) {
-        ProjectEntity project = projectService.create(request.name(), request.repositoryUrl(), request.repositoryBranch());
+        UUID ownerId = SecurityUtils.requireUserId();
+        ProjectEntity project = projectService.create(ownerId, request.name(), request.repositoryUrl(), request.repositoryBranch());
         return ResponseEntity.created(URI.create("/api/projects/" + project.getId()))
                 .body(toResponse(project));
     }
 
     @GetMapping
     public List<ProjectResponse> list() {
-        return projectService.findAll().stream().map(this::toResponse).toList();
+        UUID ownerId = SecurityUtils.requireUserId();
+        return projectService.findByOwner(ownerId).stream().map(this::toResponse).toList();
     }
 
     @GetMapping("/{id}")
     public ProjectResponse get(@PathVariable UUID id) {
-        return toResponse(projectService.get(id));
+        UUID ownerId = SecurityUtils.requireUserId();
+        return toResponse(projectService.getOwned(ownerId, id));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        projectService.delete(id);
+        UUID ownerId = SecurityUtils.requireUserId();
+        projectService.delete(ownerId, id);
         return ResponseEntity.noContent().build();
     }
 

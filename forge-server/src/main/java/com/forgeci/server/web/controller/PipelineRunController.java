@@ -2,6 +2,7 @@ package com.forgeci.server.web.controller;
 
 import com.forgeci.server.application.PipelineRunService;
 import com.forgeci.server.entity.PipelineRunEntity;
+import com.forgeci.server.security.SecurityUtils;
 import com.forgeci.server.web.dto.PipelineRunResponse;
 import com.forgeci.server.web.dto.StartRunRequest;
 import java.net.URI;
@@ -28,25 +29,29 @@ public class PipelineRunController {
     @PostMapping("/pipelines/{pipelineId}/runs")
     public ResponseEntity<PipelineRunResponse> start(@PathVariable UUID pipelineId,
                                                      @RequestBody(required = false) StartRunRequest request) {
+        UUID ownerId = SecurityUtils.requireUserId();
         String revision = request == null ? null : request.revision();
-        PipelineRunEntity run = runService.start(pipelineId, revision);
+        PipelineRunEntity run = runService.start(ownerId, pipelineId, revision);
         return ResponseEntity.created(URI.create("/api/pipeline-runs/" + run.getId()))
                 .body(toResponse(run));
     }
 
     @GetMapping("/pipelines/{pipelineId}/runs")
     public List<PipelineRunResponse> listByPipeline(@PathVariable UUID pipelineId) {
-        return runService.listByPipeline(pipelineId).stream().map(this::toResponse).toList();
+        UUID ownerId = SecurityUtils.requireUserId();
+        return runService.listByPipeline(ownerId, pipelineId).stream().map(this::toResponse).toList();
     }
 
     @GetMapping("/pipeline-runs/{id}")
     public PipelineRunResponse get(@PathVariable UUID id) {
-        return toResponse(runService.get(id));
+        UUID ownerId = SecurityUtils.requireUserId();
+        return toResponse(runService.get(ownerId, id));
     }
 
     @PostMapping("/pipeline-runs/{id}/cancel")
     public PipelineRunResponse cancel(@PathVariable UUID id) {
-        return toResponse(runService.cancel(id));
+        UUID ownerId = SecurityUtils.requireUserId();
+        return toResponse(runService.cancel(ownerId, id));
     }
 
     private PipelineRunResponse toResponse(PipelineRunEntity entity) {

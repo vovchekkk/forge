@@ -1,9 +1,12 @@
 package com.forgeci.server.web;
 
 import com.forgeci.server.application.ConflictException;
+import com.forgeci.server.application.ForbiddenException;
 import com.forgeci.server.application.InvalidPipelineException;
 import com.forgeci.server.application.InvalidRunnerTokenException;
 import com.forgeci.server.application.NotFoundException;
+import com.forgeci.server.application.RateLimitException;
+import com.forgeci.server.application.UnauthorizedException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +37,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidRunnerTokenException.class)
     public ResponseEntity<Map<String, Object>> invalidToken(InvalidRunnerTokenException e) {
         return build(HttpStatus.UNAUTHORIZED, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Map<String, Object>> unauthorized(UnauthorizedException e) {
+        return build(HttpStatus.UNAUTHORIZED, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> forbidden(ForbiddenException e) {
+        return build(HttpStatus.FORBIDDEN, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(RateLimitException.class)
+    public ResponseEntity<Map<String, Object>> rateLimit(RateLimitException e) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, e.getMessage(), null);
     }
 
     @ExceptionHandler(InvalidPipelineException.class)

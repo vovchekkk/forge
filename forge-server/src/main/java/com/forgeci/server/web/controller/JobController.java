@@ -1,10 +1,13 @@
 package com.forgeci.server.web.controller;
 
+import com.forgeci.dto.JobStatusResponse;
+import com.forgeci.server.application.PipelineRunService;
 import com.forgeci.server.application.RunnerService;
 import com.forgeci.server.entity.JobEntity;
 import com.forgeci.server.entity.JobLogEntity;
 import com.forgeci.server.repository.JobLogRepository;
 import com.forgeci.server.repository.JobRepository;
+import com.forgeci.server.security.SecurityUtils;
 import com.forgeci.server.web.dto.JobLogResponse;
 import com.forgeci.server.web.dto.JobResponse;
 import java.util.List;
@@ -21,31 +24,40 @@ public class JobController {
     private final JobRepository jobRepository;
     private final JobLogRepository jobLogRepository;
     private final RunnerService runnerService;
+    private final PipelineRunService runService;
 
-    public JobController(JobRepository jobRepository, JobLogRepository jobLogRepository, RunnerService runnerService) {
+    public JobController(JobRepository jobRepository, JobLogRepository jobLogRepository,
+                         RunnerService runnerService, PipelineRunService runService) {
         this.jobRepository = jobRepository;
         this.jobLogRepository = jobLogRepository;
         this.runnerService = runnerService;
+        this.runService = runService;
     }
 
     @GetMapping("/pipeline-runs/{runId}/jobs")
     public List<JobResponse> listByRun(@PathVariable UUID runId) {
+        UUID ownerId = SecurityUtils.requireUserId();
+        runService.get(ownerId, runId);
         return jobRepository.findByPipelineRunId(runId).stream().map(this::toResponse).toList();
     }
 
     @GetMapping("/jobs/{id}")
     public JobResponse get(@PathVariable UUID id) {
-        return toResponse(runnerService.getJob(id));
+        UUID ownerId = SecurityUtils.requireUserId();
+        return toResponse(runnerService.getOwnedJob(ownerId, id));
     }
 
     @GetMapping("/jobs/{id}/status")
-    public com.forgeci.dto.JobStatusResponse status(@PathVariable UUID id) {
-        JobEntity job = runnerService.getJob(id);
-        return new com.forgeci.dto.JobStatusResponse(job.getId(), job.getStatus());
+    public JobStatusResponse status(@PathVariable UUID id) {
+        UUID ownerId = SecurityUtils.requireUserId();
+        JobEntity job = runnerService.getOwnedJob(ownerId, id);
+        return new JobStatusResponse(job.getId(), job.getStatus());
     }
 
     @GetMapping("/jobs/{id}/logs")
     public List<JobLogResponse> logs(@PathVariable UUID id) {
+        UUID ownerId = SecurityUtils.requireUserId();
+        runnerService.getOwnedJob(ownerId, id);
         return jobLogRepository.findByJobIdOrderByCreatedAtAsc(id).stream().map(this::toLogResponse).toList();
     }
 

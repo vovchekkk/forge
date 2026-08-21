@@ -26,23 +26,27 @@ public class ServerApiClient {
 
     private final RestClient restClient;
     private final String baseUrl;
-    private final String token;
+    private final String credential;
     private UUID runnerId;
 
     public ServerApiClient(ForgeRunnerProperties properties) {
         this.baseUrl = properties.server().url();
-        this.token = properties.server().token();
+        this.credential = properties.server().token();
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
 
+    private RestClient.RequestHeadersSpec<?> withCredential(RestClient.RequestHeadersSpec<?> spec) {
+        return spec.header(RunnerAuthenticationHeader.NAME, credential);
+    }
+
     public UUID register(String name) {
         RunnerRegistrationResponse response = restClient.post()
                 .uri("/api/runners/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new RunnerRegistrationRequest(name, token))
+                .body(new RunnerRegistrationRequest(name, credential))
                 .retrieve()
                 .body(RunnerRegistrationResponse.class);
         this.runnerId = response.runnerId();
@@ -52,11 +56,10 @@ public class ServerApiClient {
 
     public void heartbeat(RunnerStatus status, UUID currentJobId) {
         try {
-            restClient.post()
+            withCredential(restClient.post()
                     .uri("/api/runners/{id}/heartbeat", runnerId)
-                    .header("X-Forge-Token", token)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new RunnerHeartbeatRequest(status, currentJobId))
+                    .body(new RunnerHeartbeatRequest(status, currentJobId)))
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
@@ -66,9 +69,8 @@ public class ServerApiClient {
 
     public Optional<JobClaim> nextJob() {
         try {
-            return restClient.get()
-                    .uri("/api/runners/{id}/jobs/next", runnerId)
-                    .header("X-Forge-Token", token)
+            return withCredential(restClient.get()
+                    .uri("/api/runners/{id}/jobs/next", runnerId))
                     .exchange((request, response) -> {
                         if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
                             return Optional.empty();
@@ -89,11 +91,10 @@ public class ServerApiClient {
             return;
         }
         try {
-            restClient.post()
+            withCredential(restClient.post()
                     .uri("/api/runners/{id}/jobs/{jobId}/logs", runnerId, jobId)
-                    .header("X-Forge-Token", token)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new LogChunkRequest(lines))
+                    .body(new LogChunkRequest(lines)))
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
@@ -103,11 +104,10 @@ public class ServerApiClient {
 
     public void reportResult(JobResult result) {
         try {
-            restClient.post()
+            withCredential(restClient.post()
                     .uri("/api/runners/{id}/jobs/{jobId}/result", runnerId, result.jobId())
-                    .header("X-Forge-Token", token)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(result)
+                    .body(result))
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
@@ -118,8 +118,8 @@ public class ServerApiClient {
     /** Returns the current server-side status of a job, or null when unreachable. */
     public JobStatus jobStatus(UUID jobId) {
         try {
-            JobStatusResponse response = restClient.get()
-                    .uri("/api/jobs/{id}/status", jobId)
+            JobStatusResponse response = withCredential(restClient.get()
+                    .uri("/api/runners/{id}/jobs/{jobId}/status", runnerId, jobId))
                     .retrieve()
                     .body(JobStatusResponse.class);
             return response == null ? null : response.status();
@@ -127,5 +127,9 @@ public class ServerApiClient {
             log.debug("Failed to fetch status for job {}: {}", jobId, e.getMessage());
             return null;
         }
+    }
+
+    private static final class RunnerAuthenticationHeader {
+        static final String NAME = "X-Forge-Runner-Token";
     }
 }

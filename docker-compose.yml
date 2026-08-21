@@ -30,6 +30,8 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-forge}
       DB_USER: ${POSTGRES_USER:-forge}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-forge}
+      FORGE_JWT_SECRET: ${FORGE_JWT_SECRET:change-me-to-a-long-random-secret}
+      FORGE_CORS_ORIGINS: ${FORGE_CORS_ORIGINS:-}
       SPRING_PROFILES_ACTIVE: prod
     ports:
       - "8080:8080"

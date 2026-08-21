@@ -82,7 +82,7 @@ cd /opt/forge
 ```bash
 mkdir -p /srv/forge/workspaces
 cp .env.example .env
-vim .env   # set FORGE_SERVER_TOKEN to a long random value
+vim .env   # set FORGE_JWT_SECRET and FORGE_SERVER_TOKEN to long random values
 ```
 
 `.env.example`:
@@ -91,12 +91,18 @@ vim .env   # set FORGE_SERVER_TOKEN to a long random value
 POSTGRES_DB=forge
 POSTGRES_USER=forge
 POSTGRES_PASSWORD=change-me
+FORGE_JWT_SECRET=change-me-to-a-long-random-secret
 FORGE_SERVER_TOKEN=change-me-to-a-long-random-string
 FORGE_WORKSPACE_DIR=/srv/forge/workspaces
 ```
 
-> The runner token is a shared secret: the runner presents it when registering
-> and on every call (`X-Forge-Token`). Keep it private.
+> `FORGE_JWT_SECRET` signs access tokens (min 32 chars) — if it is left empty the
+> server generates a random one per boot, which logs everyone out on restart.
+>
+> The runner credential (`FORGE_SERVER_TOKEN`) is now created through the API:
+> `POST /api/runners` (requires a user JWT) returns a one-time registration
+> credential. Put that value in the runner's `FORGE_SERVER_TOKEN`. The runner
+> presents it on every call (`X-Forge-Runner-Token`). Keep it private.
 
 ### Cloning private repositories
 
@@ -164,9 +170,13 @@ Forge is now available at `https://ci.example.ru/swagger-ui.html`.
 
 ## 8. Try it end to end
 
-1. Create a project pointing at your demo repository (see `examples/`).
-2. Start a run from the Swagger UI or the API.
-3. Watch the runner pick up the job, clone the repo, and execute each command
+1. Register a user: `POST /api/auth/register` with an email + password (min 8
+   chars). Login (`POST /api/auth/login`) and keep the returned access token.
+2. Create a runner credential: `POST /api/runners` with your JWT — returns a
+   one-time registration token. Set it as `FORGE_SERVER_TOKEN` for the runner.
+3. Create a project pointing at your demo repository (see `examples/`).
+4. Start a run from the Swagger UI or the API.
+5. Watch the runner pick up the job, clone the repo, and execute each command
    in a container bound to the shared workspace.
 
 ## Useful commands
@@ -181,8 +191,9 @@ docker compose down -v                 # stop and wipe the DB volume
 
 ## Troubleshooting
 
-- **Runner stays OFFLINE** — check `FORGE_SERVER_URL` and token match the
-  server; the runner needs outbound access to `forge-server:8080`.
+- **Runner stays OFFLINE** — check `FORGE_SERVER_URL` and that `FORGE_SERVER_TOKEN`
+  matches a credential created via `POST /api/runners` (not yet revoked); the
+  runner needs outbound access to `forge-server:8080`.
 - **Job fails with "Docker execution failed"** — the runner container needs
   `/var/run/docker.sock` mounted and the job images must be pullable.
 - **Workspace bind mount errors** — `FORGE_RUNNER_WORKSPACE` inside the runner
