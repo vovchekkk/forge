@@ -8,6 +8,7 @@ spring:
 forge:
   server:
     url: ${FORGE_SERVER_URL:http://localhost:8080}
+    # Registration credential obtained from POST /api/runners (shown only once)
     token: ${FORGE_SERVER_TOKEN:local-dev-token}
   runner:
     name: ${FORGE_RUNNER_NAME:local-runner}

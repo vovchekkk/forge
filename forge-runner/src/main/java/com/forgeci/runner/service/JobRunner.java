@@ -5,6 +5,7 @@ import com.forgeci.dto.JobResult;
 import com.forgeci.model.JobStatus;
 import com.forgeci.model.RunnerStatus;
 import com.forgeci.runner.client.ServerApiClient;
+import com.forgeci.runner.config.ForgeRunnerProperties;
 import com.forgeci.runner.docker.DockerExecutor;
 import com.forgeci.runner.git.GitCheckout;
 import com.forgeci.runner.workspace.WorkspaceManager;
@@ -28,15 +29,19 @@ public class JobRunner implements DisposableBean {
     private final GitCheckout gitCheckout;
     private final DockerExecutor dockerExecutor;
     private final WorkspaceManager workspaceManager;
+    private final String name;
     private final AtomicReference<UUID> currentJob = new AtomicReference<>();
     private volatile boolean registered = false;
 
     public JobRunner(ServerApiClient apiClient, GitCheckout gitCheckout, DockerExecutor dockerExecutor,
-                     WorkspaceManager workspaceManager) {
+                     WorkspaceManager workspaceManager, ForgeRunnerProperties properties) {
         this.apiClient = apiClient;
         this.gitCheckout = gitCheckout;
         this.dockerExecutor = dockerExecutor;
         this.workspaceManager = workspaceManager;
+        this.name = properties.runner().name() == null || properties.runner().name().isBlank()
+                ? "runner-" + UUID.randomUUID().toString().substring(0, 8)
+                : properties.runner().name();
     }
 
     /** Periodic poll loop - the runner is not a scheduler, it only picks up work. */
@@ -94,16 +99,10 @@ public class JobRunner implements DisposableBean {
 
     public void register() {
         if (!registered) {
-            apiClient.register(name());
+            apiClient.register(name);
             registered = true;
             log.info("Runner registered, starting poll loop");
         }
-    }
-
-    private String name() {
-        return System.getenv("FORGE_RUNNER_NAME") != null
-                ? System.getenv("FORGE_RUNNER_NAME")
-                : "runner-" + java.util.UUID.randomUUID().toString().substring(0, 8);
     }
 
     @Override
