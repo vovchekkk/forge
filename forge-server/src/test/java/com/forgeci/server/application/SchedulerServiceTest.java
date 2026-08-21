@@ -14,6 +14,7 @@ import com.forgeci.server.entity.JobEntity;
 import com.forgeci.server.entity.PipelineEntity;
 import com.forgeci.server.entity.PipelineRunEntity;
 import com.forgeci.server.entity.ProjectEntity;
+import com.forgeci.server.entity.UserEntity;
 import com.forgeci.server.repository.JobRepository;
 import com.forgeci.server.repository.PipelineRunRepository;
 import java.util.ArrayList;
@@ -41,7 +42,8 @@ class SchedulerServiceTest {
     @BeforeEach
     void setUp() {
         schedulerService = new SchedulerService(jobRepository, runRepository);
-        ProjectEntity project = new ProjectEntity("proj", "https://example.com/repo.git", "main");
+        UserEntity owner = new UserEntity("owner@test.local", "hashed");
+        ProjectEntity project = new ProjectEntity(owner, "proj", "https://example.com/repo.git", "main");
         PipelineEntity pipeline = new PipelineEntity(project, "ci", "config");
         run = new PipelineRunEntity(pipeline, PipelineRunStatus.QUEUED, "config", null);
         run.setId(UUID.randomUUID());

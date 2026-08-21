@@ -19,7 +19,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -40,9 +39,10 @@ class ConcurrentClaimingIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void twoRunnersNeverReceiveTheSameJob() throws Exception {
-        ProjectEntity project = projectService.create("concurrent-repo",
+        UUID ownerId = createUser("concurrent-owner@example.com");
+        ProjectEntity project = projectService.create(ownerId, "concurrent-repo",
                 "https://example.com/concurrent.git", "main");
-        PipelineEntity pipeline = pipelineService.create(project.getId(), """
+        PipelineEntity pipeline = pipelineService.create(ownerId, project.getId(), """
                 name: Concurrent
                 image: alpine
                 jobs:
@@ -55,10 +55,10 @@ class ConcurrentClaimingIntegrationTest extends AbstractIntegrationTest {
                   job6: { commands: [echo 6] }
                   job7: { commands: [echo 7] }
                 """);
-        PipelineRunEntity run = runService.start(pipeline.getId(), null);
+        PipelineRunEntity run = runService.start(ownerId, pipeline.getId(), null);
 
-        var runnerA = runnerService.register("runner-A", "token-A-" + UUID.randomUUID());
-        var runnerB = runnerService.register("runner-B", "token-B-" + UUID.randomUUID());
+        UUID runnerA = createRunner(ownerId, "runner-A");
+        UUID runnerB = createRunner(ownerId, "runner-B");
 
         int perRunner = 4;
         ExecutorService pool = Executors.newFixedThreadPool(8);
@@ -68,7 +68,7 @@ class ConcurrentClaimingIntegrationTest extends AbstractIntegrationTest {
         List<Exception> errors = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         Runnable poller = () -> {
-            UUID runnerId = Thread.currentThread().getName().startsWith("A") ? runnerA.getId() : runnerB.getId();
+            UUID runnerId = Thread.currentThread().getName().startsWith("A") ? runnerA : runnerB;
             try {
                 startLatch.await();
                 for (int i = 0; i < perRunner; i++) {
@@ -101,9 +101,10 @@ class ConcurrentClaimingIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void independentJobsBecomeReadyInParallel() throws Exception {
-        ProjectEntity project = projectService.create("parallel-repo",
+        UUID ownerId = createUser("parallel-owner@example.com");
+        ProjectEntity project = projectService.create(ownerId, "parallel-repo",
                 "https://example.com/parallel.git", "main");
-        PipelineEntity pipeline = pipelineService.create(project.getId(), """
+        PipelineEntity pipeline = pipelineService.create(ownerId, project.getId(), """
                 name: Parallel
                 image: alpine
                 jobs:
@@ -111,9 +112,9 @@ class ConcurrentClaimingIntegrationTest extends AbstractIntegrationTest {
                   b: { commands: [echo b] }
                   c: { commands: [echo c] }
                 """);
-        PipelineRunEntity run = runService.start(pipeline.getId(), null);
+        PipelineRunEntity run = runService.start(ownerId, pipeline.getId(), null);
 
-        var runner = runnerService.register("parallel-runner", "token-" + UUID.randomUUID());
+        UUID runnerId = createRunner(ownerId, "parallel-runner");
 
         Set<UUID> claimed = ConcurrentHashMap.newKeySet();
         ExecutorService pool = Executors.newFixedThreadPool(3);
@@ -123,7 +124,7 @@ class ConcurrentClaimingIntegrationTest extends AbstractIntegrationTest {
             pool.submit(() -> {
                 try {
                     start.await();
-                    var claim = runnerService.claimNextJob(runner.getId());
+                    var claim = runnerService.claimNextJob(runnerId);
                     claim.ifPresent(c -> claimed.add(c.jobId()));
                 } catch (Exception e) {
                     throw new RuntimeException(e);

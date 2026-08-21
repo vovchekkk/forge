@@ -56,14 +56,15 @@ class PipelinePersistenceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void fullPersistenceFlowPersistsEntities() {
-        ProjectEntity project = projectService.create("repo-a", "https://example.com/repo-a.git", "main");
+        UUID ownerId = createUser("owner-a@example.com");
+        ProjectEntity project = projectService.create(ownerId, "repo-a", "https://example.com/repo-a.git", "main");
         assertNotNull(project.getId());
 
-        PipelineEntity pipeline = pipelineService.create(project.getId(), CONFIG);
+        PipelineEntity pipeline = pipelineService.create(ownerId, project.getId(), CONFIG);
         assertNotNull(pipeline.getId());
         assertEquals("Java CI", pipeline.getName());
 
-        PipelineRunEntity run = runService.start(pipeline.getId(), "main");
+        PipelineRunEntity run = runService.start(ownerId, pipeline.getId(), "main");
         assertEquals(PipelineRunStatus.QUEUED, run.getStatus());
         assertFalse(run.getConfigSnapshot().isBlank());
 
@@ -81,21 +82,25 @@ class PipelinePersistenceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void claimMarksJobRunningAndAssignsRunner() {
-        ProjectEntity project = projectService.create("repo-b", "https://example.com/repo-b.git", "main");
-        PipelineEntity pipeline = pipelineService.create(project.getId(), CONFIG);
-        PipelineRunEntity run = runService.start(pipeline.getId(), null);
+        UUID ownerId = createUser("owner-b@example.com");
+        ProjectEntity project = projectService.create(ownerId, "repo-b", "https://example.com/repo-b.git", "main");
+        PipelineEntity pipeline = pipelineService.create(ownerId, project.getId(), CONFIG);
+        PipelineRunEntity run = runService.start(ownerId, pipeline.getId(), null);
 
-        var runner = runnerService.register("test-runner", "secret-token-" + UUID.randomUUID());
+        RunnerService.RegistrationIssue issue =
+                runnerService.createCredential(ownerId, "test-runner");
+        UUID runnerId = issue.runner().getId();
+        runnerService.register("test-runner", issue.registrationToken());
 
-        Optional<com.forgeci.dto.JobClaim> claim = runnerService.claimNextJob(runner.getId());
+        Optional<com.forgeci.dto.JobClaim> claim = runnerService.claimNextJob(runnerId);
         assertTrue(claim.isPresent());
 
         JobEntity claimed = jobRepository.findById(claim.get().jobId()).orElseThrow();
         assertEquals(JobStatus.RUNNING, claimed.getStatus());
-        assertEquals(runner.getId(), claimed.getRunner().getId());
+        assertEquals(runnerId, claimed.getRunner().getId());
 
         // Only one job can be claimed at a time by this runner call sequence
-        Optional<com.forgeci.dto.JobClaim> second = runnerService.claimNextJob(runner.getId());
+        Optional<com.forgeci.dto.JobClaim> second = runnerService.claimNextJob(runnerId);
         assertTrue(second.isPresent());
         assertFalse(second.get().jobId().equals(claim.get().jobId()));
 
