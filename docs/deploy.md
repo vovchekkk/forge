@@ -147,7 +147,7 @@ cp .env.runner.example .env.runner
 vim .env.runner   # set FORGE_SERVER_TOKEN (from POST /api/runners)
 
 # 3. Start the runner (uses docker-compose.runner.yml)
-docker compose -f docker-compose.runner.yml up -d --build
+docker compose --env-file .env.runner -f docker-compose.runner.yml up -d --build
 ```
 
 `.env.runner.example`:
