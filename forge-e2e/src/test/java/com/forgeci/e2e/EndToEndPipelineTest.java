@@ -173,7 +173,10 @@ class EndToEndPipelineTest {
 
     private Path createLocalGitRepo() throws Exception {
         Path repo = Files.createTempDirectory("forge-e2e-git");
-        try (Git git = Git.init().setDirectory(repo.toFile()).call()) {
+        try (Git git = Git.init()
+                .setDirectory(repo.toFile())
+                .setInitialBranch("main")
+                .call()) {
             Files.writeString(repo.resolve("README.md"), "# e2e\n");
             git.add().addFilepattern(".").call();
             git.commit().setMessage("initial commit")
