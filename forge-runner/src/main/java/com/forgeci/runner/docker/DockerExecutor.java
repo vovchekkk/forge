@@ -135,18 +135,37 @@ public class DockerExecutor {
         }
     }
 
+    private static final int IMAGE_PULL_ATTEMPTS = 3;
+
     private void ensureImage(String image) {
         try {
             dockerClient.inspectImageCmd(image).exec();
-        } catch (Exception e) {
-            log.info("Pulling image {}", image);
+            return;
+        } catch (Exception ignore) {
+            // image not present locally, pull below
+        }
+        RuntimeException last = null;
+        for (int attempt = 1; attempt <= IMAGE_PULL_ATTEMPTS; attempt++) {
             try {
+                log.info("Pulling image {} (attempt {}/{})", image, attempt, IMAGE_PULL_ATTEMPTS);
                 dockerClient.pullImageCmd(image).exec(new PullImageCallback()).awaitCompletion();
+                return;
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Image pull interrupted: " + image, ie);
+            } catch (RuntimeException e) {
+                last = e;
+                log.warn("Image pull {} failed on attempt {}/{}: {}", image, attempt, IMAGE_PULL_ATTEMPTS,
+                        e.getMessage());
+                try {
+                    Thread.sleep(1000L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Image pull interrupted: " + image, ie);
+                }
             }
         }
+        throw last;
     }
 
     private String createContainer(String image, String command, Map<String, String> environment,
