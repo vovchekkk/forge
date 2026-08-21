@@ -27,6 +27,7 @@
         <docker-java.version>3.4.2</docker-java.version>
         <flyway.version>10.22.0</flyway.version>
         <jackson.version>2.18.2</jackson.version>
+        <springdoc.version>2.8.17</springdoc.version>
     </properties>
 
     <dependencyManagement>
