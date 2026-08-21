@@ -14,7 +14,8 @@ public record ForgeRunnerProperties(
 
     public record Runner(
             String name,
-            String workspace) {}
+            String workspace,
+            String volume) {}
 
     public record Git(
             String username,

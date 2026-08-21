@@ -36,7 +36,8 @@ public class RunnerConfig {
     }
 
     @Bean
-    public DockerExecutor dockerExecutor(DockerClient dockerClient) {
-        return new DockerExecutor(dockerClient);
+    public DockerExecutor dockerExecutor(DockerClient dockerClient, ForgeRunnerProperties properties) {
+        String volume = properties.runner().volume();
+        return new DockerExecutor(dockerClient, volume);
     }
 }

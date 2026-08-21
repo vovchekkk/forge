@@ -25,7 +25,7 @@ class RunnerConfigTest {
         ForgeRunnerProperties properties() {
             return new ForgeRunnerProperties(
                     new ForgeRunnerProperties.Server("http://localhost:8080", "test-token"),
-                    new ForgeRunnerProperties.Runner("test-runner", null),
+                    new ForgeRunnerProperties.Runner("test-runner", null, null),
                     null);
         }
     }

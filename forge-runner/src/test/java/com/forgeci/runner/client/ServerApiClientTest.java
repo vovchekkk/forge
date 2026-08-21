@@ -41,7 +41,7 @@ class ServerApiClientTest {
         String url = "http://localhost:" + server.getAddress().getPort();
         client = new ServerApiClient(new ForgeRunnerProperties(
                 new ForgeRunnerProperties.Server(url, "secret-token"),
-                new ForgeRunnerProperties.Runner("test-runner", null),
+                new ForgeRunnerProperties.Runner("test-runner", null, null),
                 null));
     }
 
@@ -143,7 +143,7 @@ class ServerApiClientTest {
         // nextJob against a stopped server must not throw, just return empty.
         client = new ServerApiClient(new ForgeRunnerProperties(
                 new ForgeRunnerProperties.Server("http://localhost:1", "secret-token"),
-                new ForgeRunnerProperties.Runner("test-runner", null),
+                new ForgeRunnerProperties.Runner("test-runner", null, null),
                 null));
         Optional<JobClaim> claim = client.nextJob();
         assertThat(claim).isEmpty();

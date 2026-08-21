@@ -50,7 +50,7 @@ class JobRunnerTest {
         runner = new JobRunner(apiClient, gitCheckout, dockerExecutor, workspaceManager,
                 new ForgeRunnerProperties(
                         new ForgeRunnerProperties.Server("http://localhost", "tok"),
-                        new ForgeRunnerProperties.Runner("test-runner", null),
+                        new ForgeRunnerProperties.Runner("test-runner", null, null),
                         null));
     }
 

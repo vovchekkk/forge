@@ -11,6 +11,7 @@ import com.github.dockerjava.api.model.Volume;
 import com.github.dockerjava.core.command.LogContainerResultCallback;
 import java.time.Duration;
 import java.time.Instant;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +33,15 @@ public class DockerExecutor {
     private static final String WORKSPACE_DIR = "/workspace";
 
     private final DockerClient dockerClient;
+    private final String workspaceVolumeName;
 
     public DockerExecutor(DockerClient dockerClient) {
+        this(dockerClient, null);
+    }
+
+    public DockerExecutor(DockerClient dockerClient, String workspaceVolumeName) {
         this.dockerClient = dockerClient;
+        this.workspaceVolumeName = workspaceVolumeName;
     }
 
     /**
@@ -146,12 +153,22 @@ public class DockerExecutor {
                                    String hostWorkspace) {
         Volume volume = new Volume(WORKSPACE_DIR);
         HostConfig hostConfig = HostConfig.newHostConfig()
-                .withBinds(new Bind(hostWorkspace, volume, AccessMode.rw))
                 .withPrivileged(false)
                 .withAutoRemove(false);
+        String workingDir = WORKSPACE_DIR;
+        if (workspaceVolumeName != null && !workspaceVolumeName.isBlank()) {
+            // Shared named volume: both the runner and job containers mount it,
+            // so the workspace is visible at /workspace/<jobId> inside the job.
+            hostConfig = hostConfig.withBinds(new Bind(workspaceVolumeName, volume, AccessMode.rw));
+            String jobDir = Path.of(hostWorkspace).getFileName().toString();
+            workingDir = WORKSPACE_DIR + "/" + jobDir;
+        } else {
+            // Fallback: bind the host workspace directory directly.
+            hostConfig = hostConfig.withBinds(new Bind(hostWorkspace, volume, AccessMode.rw));
+        }
 
         CreateContainerCmd cmd = dockerClient.createContainerCmd(image)
-                .withWorkingDir(WORKSPACE_DIR)
+                .withWorkingDir(workingDir)
                 .withCmd("/bin/sh", "-lc", command)
                 .withHostConfig(hostConfig);
         if (environment != null && !environment.isEmpty()) {
