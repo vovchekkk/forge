@@ -39,9 +39,12 @@ public interface JobRepository extends JpaRepository<JobEntity, UUID> {
 
     @Query(value = "select j.* from jobs j " +
             "join pipeline_runs pr on pr.id = j.pipeline_run_id " +
-            "where pr.status in ('QUEUED','RUNNING') " +
+            "join pipelines p on p.id = pr.pipeline_id " +
+            "join projects pj on pj.id = p.project_id " +
+            "where pj.owner_id = :ownerId " +
+            "and pr.status in ('QUEUED','RUNNING') " +
             "and j.status = 'READY' and j.runner_id is null " +
             "order by j.created_at asc " +
             "for update of j skip locked limit 1", nativeQuery = true)
-    Optional<JobEntity> claimNextJob();
+    Optional<JobEntity> claimNextJob(@Param("ownerId") UUID ownerId);
 }

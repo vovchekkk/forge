@@ -2,6 +2,7 @@ package com.forgeci.server.web.controller;
 
 import com.forgeci.server.application.PipelineService;
 import com.forgeci.server.entity.PipelineEntity;
+import com.forgeci.server.security.SecurityUtils;
 import com.forgeci.server.web.dto.CreatePipelineRequest;
 import com.forgeci.server.web.dto.PipelineResponse;
 import jakarta.validation.Valid;
@@ -29,19 +30,22 @@ public class PipelineController {
     @PostMapping("/projects/{projectId}/pipelines")
     public ResponseEntity<PipelineResponse> create(@PathVariable UUID projectId,
                                                    @Valid @RequestBody CreatePipelineRequest request) {
-        PipelineEntity pipeline = pipelineService.create(projectId, request.config());
+        UUID ownerId = SecurityUtils.requireUserId();
+        PipelineEntity pipeline = pipelineService.create(ownerId, projectId, request.config());
         return ResponseEntity.created(URI.create("/api/pipelines/" + pipeline.getId()))
                 .body(toResponse(pipeline));
     }
 
     @GetMapping("/projects/{projectId}/pipelines")
     public List<PipelineResponse> listByProject(@PathVariable UUID projectId) {
-        return pipelineService.listByProject(projectId).stream().map(this::toResponse).toList();
+        UUID ownerId = SecurityUtils.requireUserId();
+        return pipelineService.listByProject(ownerId, projectId).stream().map(this::toResponse).toList();
     }
 
     @GetMapping("/pipelines/{id}")
     public PipelineResponse get(@PathVariable UUID id) {
-        return toResponse(pipelineService.get(id));
+        UUID ownerId = SecurityUtils.requireUserId();
+        return toResponse(pipelineService.get(ownerId, id));
     }
 
     private PipelineResponse toResponse(PipelineEntity entity) {

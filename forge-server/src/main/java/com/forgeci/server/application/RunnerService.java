@@ -11,10 +11,13 @@ import com.forgeci.server.entity.JobEntity;
 import com.forgeci.server.entity.JobLogEntity;
 import com.forgeci.server.entity.PipelineRunEntity;
 import com.forgeci.server.entity.RunnerEntity;
+import com.forgeci.server.entity.UserEntity;
 import com.forgeci.server.repository.JobLogRepository;
 import com.forgeci.server.repository.JobRepository;
 import com.forgeci.server.repository.PipelineRunRepository;
 import com.forgeci.server.repository.RunnerRepository;
+import com.forgeci.server.repository.UserRepository;
+import com.forgeci.server.security.TokenHashing;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -39,18 +42,44 @@ public class RunnerService {
     private final PipelineRunRepository runRepository;
     private final SchedulerService schedulerService;
     private final ForgeProperties properties;
+    private final UserRepository userRepository;
 
     public RunnerService(RunnerRepository runnerRepository, JobRepository jobRepository,
                          JobLogRepository jobLogRepository, PipelineRunRepository runRepository,
-                         SchedulerService schedulerService, ForgeProperties properties) {
+                         SchedulerService schedulerService, ForgeProperties properties,
+                         UserRepository userRepository) {
         this.runnerRepository = runnerRepository;
         this.jobRepository = jobRepository;
         this.jobLogRepository = jobLogRepository;
         this.runRepository = runRepository;
         this.schedulerService = schedulerService;
         this.properties = properties;
+        this.userRepository = userRepository;
     }
 
+    /**
+     * Issue a new runner credential for a user. The raw registration token is returned
+     * exactly once; only its SHA-256 hash is persisted.
+     */
+    @Transactional
+    public RegistrationIssue createCredential(UUID ownerId, String name) {
+        if (name == null || name.isBlank()) {
+            throw new ConflictException("Runner name is required");
+        }
+        UserEntity owner = userRepository.findById(ownerId)
+                .orElseThrow(() -> new UnauthorizedException("Authentication required"));
+        String raw = TokenHashing.generateToken();
+        RunnerEntity runner = new RunnerEntity(
+                name.trim(), TokenHashing.hash(raw), RunnerStatus.OFFLINE, owner);
+        runner = runnerRepository.save(runner);
+        return new RegistrationIssue(runner, raw);
+    }
+
+    /**
+     * Register a runner instance using its registration credential (idempotent — a runner
+     * re-registers on every start). Matches on the credential hash; revoked or unknown
+     * credentials are rejected.
+     */
     @Transactional
     public RunnerEntity register(String name, String token) {
         if (name == null || name.isBlank()) {
@@ -59,7 +88,13 @@ public class RunnerService {
         if (token == null || token.isBlank()) {
             throw new InvalidRunnerTokenException("Runner token is required");
         }
-        RunnerEntity runner = new RunnerEntity(name, token, RunnerStatus.ONLINE);
+        RunnerEntity runner = runnerRepository.findByCredentialHash(TokenHashing.hash(token))
+                .orElseThrow(() -> new InvalidRunnerTokenException("Invalid runner token"));
+        if (runner.isRevoked()) {
+            throw new InvalidRunnerTokenException("Runner token has been revoked");
+        }
+        runner.setName(name.trim());
+        runner.setStatus(RunnerStatus.ONLINE);
         runner.setLastHeartbeatAt(Instant.now());
         return runnerRepository.save(runner);
     }
@@ -84,7 +119,8 @@ public class RunnerService {
 
     /**
      * Atomically claim the next READY job for a runner. Uses FOR UPDATE SKIP LOCKED
-     * in PostgreSQL so concurrent runners never receive the same job.
+     * in PostgreSQL so concurrent runners never receive the same job. Ownership is
+     * enforced in SQL: only jobs of projects owned by the runner's owner are claimable.
      */
     @Transactional
     public Optional<JobClaim> claimNextJob(UUID runnerId) {
@@ -93,7 +129,7 @@ public class RunnerService {
         runner.setStatus(RunnerStatus.ONLINE);
         runnerRepository.save(runner);
 
-        Optional<JobEntity> next = jobRepository.claimNextJob();
+        Optional<JobEntity> next = jobRepository.claimNextJob(runner.getOwnerId());
         if (next.isEmpty()) {
             return Optional.empty();
         }
@@ -203,4 +239,37 @@ public class RunnerService {
         return jobRepository.findById(jobId)
                 .orElseThrow(() -> new NotFoundException("Job not found: " + jobId));
     }
+
+    /** A runner may only read jobs assigned to itself. */
+    @Transactional(readOnly = true)
+    public JobEntity getRunnerJob(UUID runnerId, UUID jobId) {
+        JobEntity job = getJob(jobId);
+        if (job.getRunner() == null || !job.getRunner().getId().equals(runnerId)) {
+            throw new NotFoundException("Job not found: " + jobId);
+        }
+        return job;
+    }
+
+    /** A user may only read jobs belonging to a project they own. */
+    @Transactional(readOnly = true)
+    public JobEntity getOwnedJob(UUID ownerId, UUID jobId) {
+        JobEntity job = getJob(jobId);
+        UUID projectOwnerId = job.getPipelineRun().getPipeline().getProject().getOwnerId();
+        if (projectOwnerId == null || !projectOwnerId.equals(ownerId)) {
+            throw new NotFoundException("Job not found: " + jobId);
+        }
+        return job;
+    }
+
+    /** Revoke a runner credential so it can no longer authenticate. Jobs keep their history. */
+    @Transactional
+    public void revoke(UUID runnerId) {
+        RunnerEntity runner = getRunner(runnerId);
+        runner.setRevoked(true);
+        runner.setStatus(RunnerStatus.OFFLINE);
+        runnerRepository.save(runner);
+        log.info("Revoked credential of runner {}", runnerId);
+    }
+
+    public record RegistrationIssue(RunnerEntity runner, String registrationToken) {}
 }

@@ -41,9 +41,13 @@ public class PipelineRunService {
     }
 
     @Transactional
-    public PipelineRunEntity start(UUID pipelineId, String revision) {
+    public PipelineRunEntity start(UUID ownerId, UUID pipelineId, String revision) {
         PipelineEntity pipeline = pipelineRepository.findById(pipelineId)
                 .orElseThrow(() -> new NotFoundException("Pipeline not found: " + pipelineId));
+        UUID projectOwnerId = pipeline.getProject().getOwnerId();
+        if (projectOwnerId == null || !projectOwnerId.equals(ownerId)) {
+            throw new NotFoundException("Pipeline not found: " + pipelineId);
+        }
 
         String snapshot = pipeline.getConfig();
         PipelineDefinition definition = pipelineService.parseAndValidate(snapshot);
@@ -83,14 +87,19 @@ public class PipelineRunService {
     }
 
     @Transactional
-    public PipelineRunEntity get(UUID runId) {
-        return runRepository.findById(runId)
+    public PipelineRunEntity get(UUID ownerId, UUID runId) {
+        PipelineRunEntity run = runRepository.findById(runId)
                 .orElseThrow(() -> new NotFoundException("Pipeline run not found: " + runId));
+        UUID projectOwnerId = run.getPipeline().getProject().getOwnerId();
+        if (projectOwnerId == null || !projectOwnerId.equals(ownerId)) {
+            throw new NotFoundException("Pipeline run not found: " + runId);
+        }
+        return run;
     }
 
     @Transactional
-    public PipelineRunEntity cancel(UUID runId) {
-        PipelineRunEntity run = get(runId);
+    public PipelineRunEntity cancel(UUID ownerId, UUID runId) {
+        PipelineRunEntity run = get(ownerId, runId);
         if (run.getStatus() == PipelineRunStatus.SUCCESS
                 || run.getStatus() == PipelineRunStatus.FAILED
                 || run.getStatus() == PipelineRunStatus.CANCELED) {
@@ -122,7 +131,13 @@ public class PipelineRunService {
     }
 
     @Transactional(readOnly = true)
-    public List<PipelineRunEntity> listByPipeline(UUID pipelineId) {
+    public List<PipelineRunEntity> listByPipeline(UUID ownerId, UUID pipelineId) {
+        PipelineEntity pipeline = pipelineRepository.findById(pipelineId)
+                .orElseThrow(() -> new NotFoundException("Pipeline not found: " + pipelineId));
+        UUID projectOwnerId = pipeline.getProject().getOwnerId();
+        if (projectOwnerId == null || !projectOwnerId.equals(ownerId)) {
+            throw new NotFoundException("Pipeline not found: " + pipelineId);
+        }
         return runRepository.findByPipelineId(pipelineId);
     }
 }

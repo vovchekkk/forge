@@ -29,6 +29,17 @@ forge:
     heartbeat-interval: 10s
     offline-threshold: 30s
     offline-check-interval: 5s
+  security:
+    jwt:
+      secret: ${FORGE_JWT_SECRET:}
+      issuer: forge-ci
+      access-token-ttl: 15m
+      refresh-token-ttl: 30d
+    login:
+      max-attempts: 5
+      lockout-window: 10m
+    cors:
+      allowed-origins: ${FORGE_CORS_ORIGINS:}
 
 springdoc:
   api-docs:

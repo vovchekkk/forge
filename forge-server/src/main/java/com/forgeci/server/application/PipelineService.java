@@ -26,9 +26,12 @@ public class PipelineService {
     }
 
     @Transactional
-    public PipelineEntity create(UUID projectId, String config) {
+    public PipelineEntity create(UUID ownerId, UUID projectId, String config) {
         ProjectEntity project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new NotFoundException("Project not found: " + projectId));
+        if (project.getOwnerId() == null || !project.getOwnerId().equals(ownerId)) {
+            throw new NotFoundException("Project not found: " + projectId);
+        }
         PipelineDefinition definition = parseAndValidate(config);
         String name = definition.getName() == null || definition.getName().isBlank()
                 ? "pipeline"
@@ -38,14 +41,24 @@ public class PipelineService {
     }
 
     @Transactional(readOnly = true)
-    public List<PipelineEntity> listByProject(UUID projectId) {
+    public List<PipelineEntity> listByProject(UUID ownerId, UUID projectId) {
+        ProjectEntity project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new NotFoundException("Project not found: " + projectId));
+        if (project.getOwnerId() == null || !project.getOwnerId().equals(ownerId)) {
+            throw new NotFoundException("Project not found: " + projectId);
+        }
         return pipelineRepository.findByProjectId(projectId);
     }
 
     @Transactional(readOnly = true)
-    public PipelineEntity get(UUID id) {
-        return pipelineRepository.findById(id)
+    public PipelineEntity get(UUID ownerId, UUID id) {
+        PipelineEntity pipeline = pipelineRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Pipeline not found: " + id));
+        UUID projectOwnerId = pipeline.getProject().getOwnerId();
+        if (projectOwnerId == null || !projectOwnerId.equals(ownerId)) {
+            throw new NotFoundException("Pipeline not found: " + id);
+        }
+        return pipeline;
     }
 
     /** Parse and validate the raw YAML config. Throws {@link InvalidPipelineException} on failure. */
