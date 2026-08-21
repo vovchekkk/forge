@@ -57,7 +57,7 @@ public class DockerExecutor {
                 return new CommandResult(-1, allOutput, true, "Command timed out after " + timeout);
             }
             if (result.canceled()) {
-                return new CommandResult(-1, allOutput, false, "Job was canceled");
+                return new CommandResult(-1, allOutput, false, "Job was canceled", true);
             }
             if (result.exitCode() != 0) {
                 return new CommandResult(result.exitCode(), allOutput, false,

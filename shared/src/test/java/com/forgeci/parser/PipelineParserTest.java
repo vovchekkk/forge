@@ -69,4 +69,36 @@ class PipelineParserTest {
         assertTrue(def.getImage() == null);
         assertEquals("eclipse-temurin:25-jdk", def.resolvedImage());
     }
+
+    @Test
+    void ignoresUnknownKeys() throws IOException {
+        String yaml = """
+                name: Java CI
+                unknown_top: ignored
+                image: alpine
+                jobs:
+                  a:
+                    commands: [echo hi]
+                    unknown_job_key: ignored
+                """;
+        PipelineDefinition def = PipelineParser.parse(yaml);
+        assertEquals("Java CI", def.getName());
+        assertEquals("alpine", def.getImage());
+        assertEquals(1, def.getJobs().size());
+    }
+
+    @Test
+    void jobWithoutNeedsIsValid() throws IOException {
+        String yaml = "jobs:\n  a:\n    commands: [echo hi]\n";
+        PipelineDefinition def = PipelineParser.parse(yaml);
+        assertEquals(1, def.getJobs().size());
+        assertEquals("echo hi", def.getJobs().get("a").getCommands().get(0));
+    }
+
+    @Test
+    void emptyNameIsAllowedAtParseTime() throws IOException {
+        String yaml = "jobs:\n  a:\n    commands: [echo hi]\n";
+        PipelineDefinition def = PipelineParser.parse(yaml);
+        assertEquals(null, def.getName());
+    }
 }

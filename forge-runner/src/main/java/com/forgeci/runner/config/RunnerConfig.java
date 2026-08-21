@@ -1,8 +1,10 @@
 package com.forgeci.runner.config;
 
 import com.forgeci.runner.client.ServerApiClient;
+import com.forgeci.runner.docker.DockerExecutor;
 import com.forgeci.runner.git.GitCheckout;
 import com.forgeci.runner.workspace.WorkspaceManager;
+import com.github.dockerjava.api.DockerClient;
 import java.nio.file.Path;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,5 +33,10 @@ public class RunnerConfig {
                 ? Path.of(System.getProperty("java.io.tmpdir"), "forge-runner")
                 : Path.of(properties.runner().workspace());
         return new WorkspaceManager(root);
+    }
+
+    @Bean
+    public DockerExecutor dockerExecutor(DockerClient dockerClient) {
+        return new DockerExecutor(dockerClient);
     }
 }

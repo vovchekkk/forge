@@ -69,10 +69,15 @@ public class GitCheckout {
         if (objectId != null) {
             return objectId.getName();
         }
-        // Fall back to a raw SHA-ish ref like refs/heads/<revision>
+        // Fall back to a local branch ref.
         ObjectId ref = repository.resolve("refs/heads/" + revision);
         if (ref != null) {
             return ref.getName();
+        }
+        // Fall back to a remote-tracking branch ref (cloned with --all).
+        ObjectId remote = repository.resolve("refs/remotes/origin/" + revision);
+        if (remote != null) {
+            return remote.getName();
         }
         throw new IOException("Revision not found in repository: " + revision);
     }

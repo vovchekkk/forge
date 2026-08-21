@@ -104,4 +104,42 @@ class PipelineValidatorTest {
         assertEquals(1, errors.size());
         assertTrue(errors.get(0).contains("invalid timeout"));
     }
+
+    @Test
+    void duplicateDependencyIsValidatedAsKnownJob() throws IOException {
+        String yaml = """
+                jobs:
+                  a:
+                    commands: [echo a]
+                    needs: [b, b]
+                  b:
+                    commands: [echo b]
+                """;
+        List<String> errors = PipelineValidator.validate(parse(yaml));
+        assertTrue(errors.isEmpty(), "duplicate known dependency should not produce errors, got: " + errors);
+    }
+
+    @Test
+    void emptyCommandsFails() throws IOException {
+        String yaml = """
+                jobs:
+                  a:
+                    commands: []
+                """;
+        List<String> errors = PipelineValidator.validate(parse(yaml));
+        assertEquals(1, errors.size());
+        assertTrue(errors.get(0).startsWith("Job 'a' has no commands"));
+    }
+
+    @Test
+    void unknownDependencyProducesSingleError() throws IOException {
+        String yaml = """
+                jobs:
+                  a:
+                    commands: [echo a]
+                    needs: [ghost1, ghost2]
+                """;
+        List<String> errors = PipelineValidator.validate(parse(yaml));
+        assertEquals(2, errors.size());
+    }
 }
