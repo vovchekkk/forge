@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to forge-ci.ru
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH agent with deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS host to known_hosts
+        run: |
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync source to VPS (keep server .env untouched)
+        run: |
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='target' \
+            --exclude='*.db*' \
+            --exclude='.claude-flow' \
+            --exclude='.opencode' \
+            --exclude='.swarm' \
+            --exclude='graphify-out' \
+            -e ssh ./ \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/forge/"
+
+      - name: Rebuild and restart services
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "cd /opt/forge && docker compose up -d --build --remove-orphans"

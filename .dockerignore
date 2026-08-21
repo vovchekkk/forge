@@ -1,0 +1,11 @@
+.git
+.github
+.gitattributes
+.claude-flow
+.opencode
+.swarm
+graphify-out
+**/target
+*.db
+ruvector.db
+.env

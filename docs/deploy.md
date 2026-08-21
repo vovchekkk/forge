@@ -4,6 +4,8 @@ This guide walks through deploying a self-hosted Forge CI instance for a demo
 or light production use: one VPS running PostgreSQL, the server, and one
 runner in Docker Compose, fronted by Caddy for HTTPS.
 
+> Live deployment: `https://forge-ci.ru`
+
 ## Architecture
 
 ```
@@ -178,6 +180,32 @@ Forge is now available at `https://ci.example.ru/swagger-ui.html`.
 4. Start a run from the Swagger UI or the API.
 5. Watch the runner pick up the job, clone the repo, and execute each command
    in a container bound to the shared workspace.
+
+## CI/CD: automatic deployment via GitHub Actions
+
+This repo deploys itself: on every push to `main`, GitHub Actions tests the
+whole reactor and ships the source to the VPS, then rebuilds the Docker images
+in place.
+
+### How it works
+
+- `.github/workflows/ci.yml` — `mvn verify` on push/PR to `main` (all modules,
+  including testcontainers integration tests).
+- `.github/workflows/deploy.yml` — on push to `main`: `rsync` the checkout to
+  `/opt/forge` on the VPS (`.env`, `target/`, local tooling dirs excluded) and
+  run `docker compose up -d --build`.
+
+### Required GitHub secrets
+
+| Secret        | Value                                          |
+|---------------|------------------------------------------------|
+| `VPS_HOST`    | `forge-ci.ru` (or the VPS IP)                  |
+| `VPS_USER`    | `root` (or your SSH user)                      |
+| `VPS_SSH_KEY` | private SSH key that can log in to the VPS     |
+
+The first deploy needs `/opt/forge/.env` to exist on the server and a valid
+Caddyfile (section 7 above). Because `.env` is excluded from the sync it is
+never overwritten by a deploy.
 
 ## Useful commands
 
