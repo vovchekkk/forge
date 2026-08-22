@@ -52,8 +52,7 @@ public class JobRunner implements DisposableBean {
                 : properties.runner().name();
     }
 
-    /** Picks up the next job and hands it to a background thread so the scheduler
-     *  thread stays free for heartbeats (otherwise long jobs kill the runner). */
+    
     @Scheduled(fixedDelayString = "${forge.runner.poll-interval:5s}")
     public void poll() {
         if (!registered) {
@@ -74,7 +73,7 @@ public class JobRunner implements DisposableBean {
         apiClient.heartbeat(currentJob.get() == null ? RunnerStatus.ONLINE : RunnerStatus.BUSY, currentJob.get());
     }
 
-    /** Package-visible for tests: call synchronously when needed. */
+    
     void execute(JobClaim job) {
         currentJob.set(job.jobId());
         apiClient.heartbeat(RunnerStatus.BUSY, job.jobId());

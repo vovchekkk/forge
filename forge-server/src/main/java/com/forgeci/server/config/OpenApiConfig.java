@@ -13,6 +13,6 @@ public class OpenApiConfig {
         return new OpenAPI().info(new Info()
                 .title("Forge CI Server API")
                 .description("Control plane for Forge CI. The server decides what should run; runners execute jobs in Docker.")
-                .version("v1"));
+                .version("v3"));
     }
 }

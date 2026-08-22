@@ -61,7 +61,7 @@ public class PipelineService {
         return pipeline;
     }
 
-    /** Parse and validate the raw YAML config. Throws {@link InvalidPipelineException} on failure. */
+    
     public PipelineDefinition parseAndValidate(String config) {
         PipelineDefinition definition;
         try {

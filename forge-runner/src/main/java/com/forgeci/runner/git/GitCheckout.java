@@ -27,11 +27,7 @@ public class GitCheckout {
         this.password = password;
     }
 
-    /**
-     * Clone the repository into {@code workspace} and check out {@code revision}.
-     * {@code revision} may be a branch name, tag, or commit SHA. When null, the
-     * default branch (HEAD) is used.
-     */
+    
     public void cloneAndCheckout(String repositoryUrl, String revision, Path workspace) throws IOException {
         try {
             if (Files.exists(workspace)) {
@@ -52,9 +48,7 @@ public class GitCheckout {
         }
     }
 
-    /** Clone is the network part; retry it on flaky connectivity. Revision
-     *  resolution and checkout stay outside the retry loop, since a missing
-     *  revision is a permanent error, not a transient one. */
+    
     private void cloneWithRetries(String repositoryUrl, Path workspace) throws IOException {
         IOException last = null;
         for (int attempt = 1; attempt <= 3; attempt++) {
@@ -95,12 +89,12 @@ public class GitCheckout {
         if (objectId != null) {
             return objectId.getName();
         }
-        // Fall back to a local branch ref.
+        
         ObjectId ref = repository.resolve("refs/heads/" + revision);
         if (ref != null) {
             return ref.getName();
         }
-        // Fall back to a remote-tracking branch ref (cloned with --all).
+        
         ObjectId remote = repository.resolve("refs/remotes/origin/" + revision);
         if (remote != null) {
             return remote.getName();

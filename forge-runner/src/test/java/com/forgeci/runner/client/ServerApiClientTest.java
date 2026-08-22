@@ -21,11 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- * Exercises {@link ServerApiClient} against a real in-process HTTP server so
- * the request/response wiring (paths, auth header, bodies) is verified end to
- * end without a live server.
- */
+
 class ServerApiClientTest {
 
     private HttpServer server;
@@ -140,7 +136,7 @@ class ServerApiClientTest {
     @Test
     void nextJobReturnsEmptyOnFailureWithoutThrowing() {
         client.register("test-runner");
-        // nextJob against a stopped server must not throw, just return empty.
+        
         client = new ServerApiClient(new ForgeRunnerProperties(
                 new ForgeRunnerProperties.Server("http://localhost:1", "secret-token"),
                 new ForgeRunnerProperties.Runner("test-runner", null, null),

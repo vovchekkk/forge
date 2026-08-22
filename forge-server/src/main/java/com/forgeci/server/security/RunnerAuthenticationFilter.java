@@ -13,12 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Authenticates runners on runner-scoped endpoints ({@code /api/runners/{id}/...})
- * via the {@code X-Forge-Runner-Token} header. A credential only authenticates the
- * exact runner it was issued to — the id in the path must match — which prevents
- * impersonation. Public and user-scoped routes are skipped.
- */
+
 @Component
 public class RunnerAuthenticationFilter extends OncePerRequestFilter {
 
@@ -55,10 +50,7 @@ public class RunnerAuthenticationFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    /**
-     * Extracts the runner id from a runner-scoped URI, or null when the request is not
-     * runner-scoped ({@code /api/runners} list/create, public {@code /api/runners/register}).
-     */
+    
     static UUID runnerPathId(String uri) {
         String prefix = "/api/runners/";
         if (!uri.startsWith(prefix)) {

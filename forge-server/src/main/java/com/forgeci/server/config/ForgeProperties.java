@@ -15,7 +15,7 @@ public class ForgeProperties {
     public Security getSecurity() { return security; }
 
     public static class Scheduler {
-        /** How often the scheduler scans for ready jobs and stale runners. */
+        
         private Duration interval = Duration.ofSeconds(1);
 
         public Duration getInterval() { return interval; }
@@ -23,9 +23,9 @@ public class ForgeProperties {
     }
 
     public static class Runner {
-        /** Heartbeat interval reported to runners. */
+        
         private Duration heartbeatInterval = Duration.ofSeconds(10);
-        /** How long without heartbeat a runner is considered offline. */
+        
         private Duration offlineThreshold = Duration.ofSeconds(30);
 
         public Duration getHeartbeatInterval() { return heartbeatInterval; }
@@ -45,7 +45,7 @@ public class ForgeProperties {
     }
 
     public static class Cors {
-        /** Explicit CORS allowed origins. Empty = same-origin only (no CORS headers). */
+        
         private java.util.List<String> allowedOrigins = java.util.List.of();
 
         public java.util.List<String> getAllowedOrigins() { return allowedOrigins; }
@@ -53,13 +53,13 @@ public class ForgeProperties {
     }
 
     public static class Jwt {
-        /** HMAC secret used to sign access tokens. MUST be set in production. */
+        
         private String secret = "";
-        /** JWT issuer claim. */
+        
         private String issuer = "forge-ci";
-        /** Access token lifetime. */
+        
         private Duration accessTokenTtl = Duration.ofMinutes(15);
-        /** Refresh token lifetime. */
+        
         private Duration refreshTokenTtl = Duration.ofDays(30);
 
         public String getSecret() { return secret; }
@@ -73,9 +73,9 @@ public class ForgeProperties {
     }
 
     public static class Login {
-        /** Failed attempts allowed within the lockout window before throttling. */
+        
         private int maxAttempts = 5;
-        /** Lockout window for failed logins. */
+        
         private Duration lockoutWindow = Duration.ofMinutes(10);
 
         public int getMaxAttempts() { return maxAttempts; }

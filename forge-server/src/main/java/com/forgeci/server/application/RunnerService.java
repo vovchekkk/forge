@@ -57,10 +57,7 @@ public class RunnerService {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Issue a new runner credential for a user. The raw registration token is returned
-     * exactly once; only its SHA-256 hash is persisted.
-     */
+    
     @Transactional
     public RegistrationIssue createCredential(UUID ownerId, String name) {
         if (name == null || name.isBlank()) {
@@ -75,11 +72,7 @@ public class RunnerService {
         return new RegistrationIssue(runner, raw);
     }
 
-    /**
-     * Register a runner instance using its registration credential (idempotent — a runner
-     * re-registers on every start). Matches on the credential hash; revoked or unknown
-     * credentials are rejected.
-     */
+    
     @Transactional
     public RunnerEntity register(String name, String token) {
         if (name == null || name.isBlank()) {
@@ -117,11 +110,7 @@ public class RunnerService {
         return runner.getStatus();
     }
 
-    /**
-     * Atomically claim the next READY job for a runner. Uses FOR UPDATE SKIP LOCKED
-     * in PostgreSQL so concurrent runners never receive the same job. Ownership is
-     * enforced in SQL: only jobs of projects owned by the runner's owner are claimable.
-     */
+    
     @Transactional
     public Optional<JobClaim> claimNextJob(UUID runnerId) {
         RunnerEntity runner = getRunner(runnerId);
@@ -203,7 +192,7 @@ public class RunnerService {
         schedulerService.updateRun(job.getPipelineRun().getId());
     }
 
-    /** Detect stale runners and fail their in-flight jobs. */
+    
     @Scheduled(fixedDelayString = "${forge.runner.offline-check-interval:5s}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void detectOfflineRunners() {
@@ -240,7 +229,7 @@ public class RunnerService {
                 .orElseThrow(() -> new NotFoundException("Job not found: " + jobId));
     }
 
-    /** A runner may only read jobs assigned to itself. */
+    
     @Transactional(readOnly = true)
     public JobEntity getRunnerJob(UUID runnerId, UUID jobId) {
         JobEntity job = getJob(jobId);
@@ -250,7 +239,7 @@ public class RunnerService {
         return job;
     }
 
-    /** A user may only read jobs belonging to a project they own. */
+    
     @Transactional(readOnly = true)
     public JobEntity getOwnedJob(UUID ownerId, UUID jobId) {
         JobEntity job = getJob(jobId);
@@ -261,7 +250,7 @@ public class RunnerService {
         return job;
     }
 
-    /** Revoke a runner credential so it can no longer authenticate. Jobs keep their history. */
+    
     @Transactional
     public void revoke(UUID runnerId) {
         RunnerEntity runner = getRunner(runnerId);

@@ -7,14 +7,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Manages per-job workspace directories. Each job gets its own directory under
- * a configured root, which is deleted after the job finishes. On Windows the
- * JGit clone leaves the pack file memory-mapped and locked until the JVM
- * releases it, so cleanup retries asynchronously over a longer window instead
- * of blocking the job thread, and any still-locked workspaces are cleaned on
- * JVM shutdown when the OS releases the file handles.
- */
+
 public class WorkspaceManager {
 
     private static final Logger log = LoggerFactory.getLogger(WorkspaceManager.class);
@@ -33,12 +26,7 @@ public class WorkspaceManager {
         Runtime.getRuntime().addShutdownHook(cleanupThread);
     }
 
-    /**
-     * On Windows JGit leaves the pack file memory-mapped and locked until the
-     * JVM exits, so a same-JVM deletion cannot succeed. Spawn a detached
-     * process that waits for this JVM to exit and then removes the workspace
-     * root.
-     */
+    
     private void cleanupOnShutdown() {
         try {
             if (!Files.exists(root)) {

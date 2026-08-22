@@ -7,13 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
-/**
- * In-memory login throttling. Tracks failed attempts per identity within a sliding
- * window and rejects further attempts once the limit is reached.
- *
- * <p>Limitation: state is per JVM instance and lost on restart — suitable for a single
- * server. A multi-instance deployment must replace this with a DB-backed implementation.
- */
+
 @Service
 public class LoginAttemptService {
 
@@ -27,7 +21,7 @@ public class LoginAttemptService {
         this.window = properties.getSecurity().getLogin().getLockoutWindow();
     }
 
-    /** Returns true when the identity is currently throttled (too many recent failures). */
+    
     public boolean isBlocked(String identity) {
         AttemptState state = attempts.get(identity);
         if (state == null) {
@@ -39,7 +33,7 @@ public class LoginAttemptService {
         }
     }
 
-    /** Record a failed attempt for the identity. */
+    
     public void recordFailure(String identity) {
         AttemptState state = attempts.computeIfAbsent(identity, k -> new AttemptState());
         synchronized (state) {
@@ -49,7 +43,7 @@ public class LoginAttemptService {
         }
     }
 
-    /** Clear recorded failures after a successful authentication. */
+    
     public void reset(String identity) {
         attempts.remove(identity);
     }

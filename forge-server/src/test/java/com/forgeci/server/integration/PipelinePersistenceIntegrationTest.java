@@ -99,17 +99,17 @@ class PipelinePersistenceIntegrationTest extends AbstractIntegrationTest {
         assertEquals(JobStatus.RUNNING, claimed.getStatus());
         assertEquals(runnerId, claimed.getRunner().getId());
 
-        // Only one job can be claimed at a time by this runner call sequence
+        
         Optional<com.forgeci.dto.JobClaim> second = runnerService.claimNextJob(runnerId);
         assertTrue(second.isPresent());
         assertFalse(second.get().jobId().equals(claim.get().jobId()));
 
-        // Run should now be RUNNING
+        
         PipelineRunEntity refreshed = runRepository.findById(run.getId()).orElseThrow();
         assertEquals(PipelineRunStatus.RUNNING, refreshed.getStatus());
     }
 
-    /** Small helper mirroring server JSON parsing for test assertions. */
+    
     static final class JsonUtilHelper {
         static List<String> parseStringList(String json) {
             return com.forgeci.server.application.JsonUtil.readStringList(json);

@@ -47,12 +47,7 @@ public class SchedulerService {
         }
     }
 
-    /**
-     * Update readiness of jobs in a run: PENDING -> READY once all deps SUCCESS,
-     * PENDING -> SKIPPED when a dependency failed/canceled/skipped. Finalizes the
-     * run when all jobs are terminal. Runs in a new transaction so concurrent
-     * claims see consistent state.
-     */
+    
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateRun(UUID runId) {
         PipelineRunEntity run = runRepository.findById(runId)
@@ -110,7 +105,7 @@ public class SchedulerService {
         }
         if (changed) {
             jobRepository.saveAll(jobs);
-            // Refresh status map used for finalization
+            
             for (JobEntity job : jobs) {
                 statusByName.put(job.getName(), job.getStatus());
             }
@@ -119,7 +114,7 @@ public class SchedulerService {
         finalizeRun(run, statusByName);
     }
 
-    /** Determine final run state when all jobs are terminal. */
+    
     private void finalizeRun(PipelineRunEntity run, Map<String, JobStatus> statusByName) {
         long total = statusByName.size();
         long terminal = statusByName.values().stream()

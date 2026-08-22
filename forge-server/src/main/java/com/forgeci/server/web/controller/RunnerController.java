@@ -42,10 +42,7 @@ public class RunnerController {
         this.runnerRepository = runnerRepository;
     }
 
-    /**
-     * Issue a new runner credential (user principal). The registration token is returned
-     * exactly once — it is never stored in plaintext server-side.
-     */
+    
     @PostMapping
     public RunnerCreateResponse create(@RequestBody RunnerRegistrationRequest request) {
         UUID ownerId = SecurityUtils.requireUserId();
@@ -55,14 +52,14 @@ public class RunnerController {
                 issue.registrationToken());
     }
 
-    /** List the authenticated user's runners. */
+    
     @GetMapping
     public List<RunnerResponse> list() {
         UUID ownerId = SecurityUtils.requireUserId();
         return runnerRepository.findByOwner_Id(ownerId).stream().map(this::toResponse).toList();
     }
 
-    /** Register a runner instance with its credential (public; idempotent). */
+    
     @PostMapping("/register")
     public RunnerRegistrationResponse register(@RequestBody RunnerRegistrationRequest request) {
         RunnerEntity runner = runnerService.register(request.name(), request.token());
@@ -103,14 +100,14 @@ public class RunnerController {
         return ResponseEntity.ok().build();
     }
 
-    /** Runner-scoped job status. */
+    
     @GetMapping("/{id}/jobs/{jobId}/status")
     public JobStatusResponse jobStatus(@PathVariable UUID id, @PathVariable UUID jobId) {
         JobEntity job = runnerService.getRunnerJob(id, jobId);
         return new JobStatusResponse(job.getId(), job.getStatus());
     }
 
-    /** Runner status: a runner reads its own status; a user reads a runner they own. */
+    
     @GetMapping("/{id}")
     public RunnerResponse status(@PathVariable UUID id) {
         RunnerEntity runner = runnerService.getRunner(id);
@@ -124,7 +121,7 @@ public class RunnerController {
         return toResponse(runner);
     }
 
-    /** Revoke a runner credential (user principal, ownership enforced). */
+    
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> revoke(@PathVariable UUID id) {
         UUID ownerId = SecurityUtils.requireUserId();

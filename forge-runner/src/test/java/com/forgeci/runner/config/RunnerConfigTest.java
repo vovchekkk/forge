@@ -11,11 +11,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Verifies the runner wiring: every collaborator required by {@code JobRunner}
- * is registered as a Spring bean. This test exists because a missing bean
- * (e.g. {@code DockerExecutor}) made the runner crash-loop in production.
- */
+
 class RunnerConfigTest {
 
     @Configuration

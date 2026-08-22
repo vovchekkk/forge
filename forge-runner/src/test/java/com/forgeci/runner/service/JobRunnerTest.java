@@ -82,8 +82,8 @@ class JobRunnerTest {
                 any(), any())).thenReturn(new DockerExecutor.CommandResult(0, List.of("ok"), false, null));
 
         runner.poll();
-        // execute runs on the background executor thread, so give it a moment
-        // and then verify the full job lifecycle completed.
+        
+        
         Thread.sleep(300);
         ArgumentCaptor<JobResult> captor = ArgumentCaptor.forClass(JobResult.class);
         verify(apiClient).reportResult(captor.capture());

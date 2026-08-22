@@ -10,10 +10,7 @@ import org.eclipse.jgit.api.Git;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/**
- * Integration test against a real repository created on disk with JGit, so the
- * clone/checkout logic is exercised against an actual git repository.
- */
+
 class GitCheckoutTest {
 
     @TempDir

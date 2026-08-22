@@ -119,7 +119,7 @@ public class ServerApiClient {
         }
     }
 
-    /** Returns the current server-side status of a job, or null when unreachable. */
+    
     public JobStatus jobStatus(UUID jobId) {
         try {
             JobStatusResponse response = withCredential(restClient.get()

@@ -53,12 +53,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/**
- * End-to-end pipeline execution: a real server, a real runner, a real git
- * repository, and real Docker containers. Verifies that the whole system works
- * together: project -&gt; pipeline -&gt; run -&gt; claim -&gt; checkout -&gt; docker -&gt;
- * logs -&gt; dependent job -&gt; SUCCESS.
- */
+
 @SpringBootTest(
         classes = com.forgeci.server.ForgeServerApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,

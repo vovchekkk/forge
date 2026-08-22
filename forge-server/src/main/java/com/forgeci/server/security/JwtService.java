@@ -27,10 +27,7 @@ import org.springframework.security.oauth2.jwt.MappedJwtClaimSetConverter;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
 
-/**
- * Issues and validates HMAC HS256 access tokens. Requires a configured secret of at
- * least 32 bytes; if none is configured a random ephemeral secret is generated (dev only).
- */
+
 @Component
 public class JwtService {
 
@@ -57,13 +54,13 @@ public class JwtService {
             throw new IllegalStateException("forge.security.jwt.secret must be at least 32 bytes for HS256");
         }
         this.key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        // Default verifier treats "iss" as a URL; our issuer is a simple name, so use an
-        // exact-match verifier that also enforces expiry.
+        
+        
         JWTClaimsSet requiredClaims = new JWTClaimsSet.Builder()
                 .issuer(properties.getSecurity().getJwt().getIssuer())
                 .build();
-        // Spring's default claim converter turns "iss" into a URI; our issuer is a plain
-        // name, so keep it a String and enforce exact-match issuer + expiry ourselves.
+        
+        
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .jwtProcessorCustomizer(c -> c.setJWTClaimsSetVerifier(
@@ -97,7 +94,7 @@ public class JwtService {
         return signedJWT.serialize();
     }
 
-    /** Returns the validated access token, or null when absent, invalid, expired or of wrong type. */
+    
     public Jwt parseAccessToken(String token) {
         try {
             Jwt jwt = decoder.decode(token);

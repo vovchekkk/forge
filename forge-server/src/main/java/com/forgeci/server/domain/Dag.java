@@ -11,9 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-/**
- * A directed acyclic graph of jobs.
- */
+
 public final class Dag {
 
     private final Map<String, Set<String>> needsByJob;
@@ -58,7 +56,7 @@ public final class Dag {
         return dependentsByJob.getOrDefault(job, Collections.emptySet());
     }
 
-    /** Jobs with no needs - candidates to run first. */
+    
     public List<String> rootJobs() {
         List<String> roots = new ArrayList<>();
         for (String job : needsByJob.keySet()) {
@@ -69,12 +67,12 @@ public final class Dag {
         return roots;
     }
 
-    /** Detect a cycle. Returns true when a cycle exists. */
+    
     public boolean hasCycle() {
         return findCycle() != null;
     }
 
-    /** Return one cycle path if present, else null. */
+    
     public List<String> findCycle() {
         Set<String> visited = new HashSet<>();
         Set<String> stack = new HashSet<>();
@@ -110,11 +108,7 @@ public final class Dag {
         return null;
     }
 
-    /**
-     * Compute jobs whose dependencies have all succeeded.
-     * @param succeeded the set of job names already SUCCESS
-     * @param skipRules job name -> skip policy (or null when not applicable)
-     */
+    
     public List<String> nextReady(Set<String> succeeded, Function<String, Boolean> skipRules) {
         List<String> ready = new ArrayList<>();
         for (String job : needsByJob.keySet()) {

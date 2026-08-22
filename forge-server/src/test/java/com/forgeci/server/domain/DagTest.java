@@ -47,10 +47,10 @@ class DagTest {
                 "b", List.of("a"),
                 "c", List.of("a")));
 
-        // Nothing succeeded -> only a is ready
+        
         assertEquals(List.of("a"), dag.nextReady(Set.of(), j -> false));
 
-        // After a succeeds, b and c become ready
+        
         assertEquals(Set.of("b", "c"), Set.copyOf(dag.nextReady(Set.of("a"), j -> false)));
     }
 
@@ -60,7 +60,7 @@ class DagTest {
                 "a", List.of(),
                 "b", List.of("a"),
                 "c", List.of("a")));
-        // b is skipped
+        
         assertEquals(List.of("a"), dag.nextReady(Set.of(), j -> "b".equals(j)));
     }
 }

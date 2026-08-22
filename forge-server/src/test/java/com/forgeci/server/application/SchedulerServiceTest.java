@@ -75,7 +75,7 @@ class SchedulerServiceTest {
         schedulerService.updateRun(run.getId());
 
         assertEquals(JobStatus.READY, b.getStatus());
-        // Run not finished yet (b is not terminal)
+        
         assertEquals(PipelineRunStatus.QUEUED, run.getStatus());
     }
 
@@ -126,7 +126,7 @@ class SchedulerServiceTest {
 
         assertEquals(JobStatus.READY, b.getStatus());
         assertEquals(JobStatus.SKIPPED, c.getStatus());
-        // Independent branch b is still READY (not terminal), so the run stays active
+        
         assertEquals(PipelineRunStatus.QUEUED, run.getStatus());
     }
 

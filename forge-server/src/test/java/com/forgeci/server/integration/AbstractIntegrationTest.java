@@ -48,13 +48,13 @@ public abstract class AbstractIntegrationTest {
                 """);
     }
 
-    /** Creates a user and returns its id. */
+    
     protected UUID createUser(String email) {
         UserEntity user = new UserEntity(email, passwordEncoder.encode("test-password-123"));
         return userRepository.save(user).getId();
     }
 
-    /** Creates a runner owned by the given user, registers it ONLINE, and returns its id. */
+    
     protected UUID createRunner(UUID ownerId, String name) {
         RunnerService.RegistrationIssue issue = runnerService.createCredential(ownerId, name);
         runnerService.register(name, issue.registrationToken());

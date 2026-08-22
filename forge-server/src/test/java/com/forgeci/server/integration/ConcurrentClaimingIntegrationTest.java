@@ -22,10 +22,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/**
- * Verifies that concurrent runners claiming jobs never receive the same job
- * twice (FOR UPDATE SKIP LOCKED).
- */
+
 class ConcurrentClaimingIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired

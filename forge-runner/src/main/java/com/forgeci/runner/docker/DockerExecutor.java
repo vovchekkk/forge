@@ -21,12 +21,7 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Executes job commands inside ephemeral Docker containers via the Docker
- * Engine API. Each command runs in its own container bound to the job
- * workspace. Containers are non-privileged, never mount the Docker socket,
- * and are always removed (also on failure and timeout).
- */
+
 public class DockerExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(DockerExecutor.class);
@@ -44,12 +39,7 @@ public class DockerExecutor {
         this.workspaceVolumeName = workspaceVolumeName;
     }
 
-    /**
-     * Run job commands sequentially. Returns the first failing result. On
-     * timeout the running container is killed and cleaned up. When
-     * {@code isCancelled} reports true the running container is killed and a
-     * canceled result is returned.
-     */
+    
     public CommandResult runJobCommands(String image, List<String> commands, Map<String, String> environment,
                                         String hostWorkspace, Duration timeout, BooleanSupplier isCancelled,
                                         Consumer<String> onLog) {
@@ -142,7 +132,7 @@ public class DockerExecutor {
             dockerClient.inspectImageCmd(image).exec();
             return;
         } catch (Exception ignore) {
-            // image not present locally, pull below
+            
         }
         RuntimeException last = null;
         for (int attempt = 1; attempt <= IMAGE_PULL_ATTEMPTS; attempt++) {
@@ -168,8 +158,7 @@ public class DockerExecutor {
         throw last;
     }
 
-    /** Default Maven JVM args injected into every job so dependency downloads
-     *  survive flaky networks without each project carrying its own config. */
+    
     static final String DEFAULT_MAVEN_OPTS =
             "-Daether.transport.http.retry.handler.count=5 "
                     + "-Daether.transport.http.retry.handler.firstDelay=500 "
@@ -186,13 +175,13 @@ public class DockerExecutor {
                 .withAutoRemove(false);
         String workingDir = WORKSPACE_DIR;
         if (workspaceVolumeName != null && !workspaceVolumeName.isBlank()) {
-            // Shared named volume: both the runner and job containers mount it,
-            // so the workspace is visible at /workspace/<jobId> inside the job.
+            
+            
             hostConfig = hostConfig.withBinds(new Bind(workspaceVolumeName, volume, AccessMode.rw));
             String jobDir = Path.of(hostWorkspace).getFileName().toString();
             workingDir = WORKSPACE_DIR + "/" + jobDir;
         } else {
-            // Fallback: bind the host workspace directory directly.
+            
             hostConfig = hostConfig.withBinds(new Bind(hostWorkspace, volume, AccessMode.rw));
         }
 
@@ -209,7 +198,7 @@ public class DockerExecutor {
         return cmd.exec().getId();
     }
 
-    /** Combines the job's own MAVEN_OPTS with the injected retry flags. */
+    
     static String mavenOpts(Map<String, String> environment) {
         String jobOpts = environment == null ? null : environment.get("MAVEN_OPTS");
         if (jobOpts == null || jobOpts.isBlank()) {
@@ -226,7 +215,7 @@ public class DockerExecutor {
         }
     }
 
-    /** Collects container stdout/stderr and streams lines to a consumer. */
+    
     private static class LoggingCallback extends LogContainerResultCallback {
         private final List<String> lines = new ArrayList<>();
         private final Consumer<String> onLog;

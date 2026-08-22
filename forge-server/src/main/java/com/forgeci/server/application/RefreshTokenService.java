@@ -11,11 +11,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Opaque refresh tokens: random 48-byte values stored only as SHA-256 hashes,
- * grouped into families for rotation and reuse detection. Presenting a token whose
- * family was already rotated revokes the whole family (credential theft signal).
- */
+
 @Service
 public class RefreshTokenService {
 
@@ -27,7 +23,7 @@ public class RefreshTokenService {
         this.properties = properties;
     }
 
-    /** Issue a fresh refresh token for a user, as the start of a new family. */
+    
     @Transactional
     public String issue(UserEntity user) {
         String raw = TokenHashing.generateToken();
@@ -40,11 +36,7 @@ public class RefreshTokenService {
         return raw;
     }
 
-    /**
-     * Rotate a refresh token. Returns a new raw token bound to a new record in the same
-     * family, revoking the presented one. On detected reuse (family already rotated),
-     * revokes the entire family and rejects.
-     */
+    
     @Transactional
     public Rotated rotate(String rawToken) {
         String hash = TokenHashing.hash(rawToken);
@@ -58,7 +50,7 @@ public class RefreshTokenService {
 
         Optional<RefreshTokenEntity> activeInFamily = tokenRepository.findByFamilyAndRevokedFalse(presented.getFamily());
         if (activeInFamily.isPresent() && !activeInFamily.get().getId().equals(presented.getId())) {
-            // A different active token exists in this family: the presented token was reused.
+            
             revokeFamily(presented.getFamily());
             throw new UnauthorizedException("Invalid refresh token");
         }
@@ -78,7 +70,7 @@ public class RefreshTokenService {
         return new Rotated(raw, next, presented.getUser());
     }
 
-    /** Revoke a token and all its siblings in the family. */
+    
     @Transactional
     public void revokeFamily(UUID family) {
         for (RefreshTokenEntity token : tokenRepository.findAll()) {

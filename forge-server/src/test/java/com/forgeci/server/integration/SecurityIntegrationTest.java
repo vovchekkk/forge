@@ -27,10 +27,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-/**
- * Security and multi-tenancy tests: authentication, refresh rotation, login
- * throttling, IDOR protection across users, and runner credential lifecycle.
- */
+
 @AutoConfigureMockMvc
 class SecurityIntegrationTest extends AbstractIntegrationTest {
 
@@ -105,16 +102,16 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     void registerLoginAndRefreshFlow() throws Exception {
         AuthTokens alice = register("alice@example.com");
 
-        // Login returns working tokens
+        
         AuthTokens loggedIn = login("alice@example.com", "test-password-123");
         assertTrue(loggedIn.accessToken() != null && !loggedIn.accessToken().isBlank());
         assertTrue(loggedIn.refreshToken() != null && !loggedIn.refreshToken().isBlank());
 
-        // Protected endpoint accessible with the bearer token
+        
         mockMvc.perform(get("/api/projects").header("Authorization", "Bearer " + loggedIn.accessToken()))
                 .andExpect(status().isOk());
 
-        // Refresh rotates the token; the old one must now be rejected
+        
         AuthTokens refreshed = refresh(loggedIn.refreshToken());
         assertTrue(refreshed.accessToken() != null && !refreshed.accessToken().isBlank());
 
@@ -123,7 +120,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(Map.of("refreshToken", loggedIn.refreshToken()))))
                 .andExpect(status().isUnauthorized());
 
-        // New refresh token still works
+        
         AuthTokens second = refresh(refreshed.refreshToken());
         assertTrue(second.accessToken() != null && !second.accessToken().isBlank());
     }
@@ -149,7 +146,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                                     "email", "throttled@example.com", "password", "wrong-password"))))
                     .andExpect(status().isUnauthorized());
         }
-        // 6th attempt within the window is throttled
+        
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -164,13 +161,13 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
 
         UUID projectId = createProject(alice, "alice-repo");
 
-        // Alice can read her own project
+        
         mockMvc.perform(get("/api/projects/" + projectId)
                         .header("Authorization", "Bearer " + alice.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("alice-repo"));
 
-        // Bob cannot read, delete, or list Alice's project
+        
         mockMvc.perform(get("/api/projects/" + projectId)
                         .header("Authorization", "Bearer " + bob.accessToken()))
                 .andExpect(status().isNotFound());
@@ -209,7 +206,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)).get("id").asText());
 
-        // Bob cannot see Alice's pipeline or run
+        
         mockMvc.perform(get("/api/pipelines/" + pipelineId)
                         .header("Authorization", "Bearer " + bob.accessToken()))
                 .andExpect(status().isNotFound());
@@ -220,7 +217,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", "Bearer " + bob.accessToken()))
                 .andExpect(status().isNotFound());
 
-        // Alice can cancel her own run
+        
         mockMvc.perform(post("/api/pipeline-runs/" + runId + "/cancel")
                         .header("Authorization", "Bearer " + alice.accessToken()))
                 .andExpect(status().isOk());
@@ -244,9 +241,9 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
         UUID aliceRunner = createRunner(aliceId, "alice-runner");
         UUID bobRunner = createRunner(bobId, "bob-runner");
 
-        // Alice's runner claims Alice's job
+        
         assertTrue(runnerService.claimNextJob(aliceRunner).isPresent());
-        // Bob's runner sees nothing
+        
         assertTrue(runnerService.claimNextJob(bobRunner).isEmpty());
     }
 
@@ -255,7 +252,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
         AuthTokens alice = register("runner-owner@example.com");
         AuthTokens bob = register("runner-bob@example.com");
 
-        // Alice creates a runner credential; token returned exactly once
+        
         MvcResult create = mockMvc.perform(post("/api/runners")
                         .header("Authorization", "Bearer " + alice.accessToken())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -267,31 +264,31 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
         String token = created.get("registrationToken").asText();
         assertTrue(token != null && !token.isBlank());
 
-        // Register with the credential (public, idempotent)
+        
         mockMvc.perform(post("/api/runners/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("name", "ci-runner", "token", token))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ONLINE"));
 
-        // Runner-scoped endpoints work with X-Forge-Runner-Token
+        
         mockMvc.perform(post("/api/runners/" + runnerId + "/heartbeat")
                         .header("X-Forge-Runner-Token", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk());
 
-        // A different user cannot revoke Alice's runner
+        
         mockMvc.perform(delete("/api/runners/" + runnerId)
                         .header("Authorization", "Bearer " + bob.accessToken()))
                 .andExpect(status().isNotFound());
 
-        // Owner revokes the credential
+        
         mockMvc.perform(delete("/api/runners/" + runnerId)
                         .header("Authorization", "Bearer " + alice.accessToken()))
                 .andExpect(status().isNoContent());
 
-        // Revoked credential no longer authenticates the runner
+        
         mockMvc.perform(post("/api/runners/" + runnerId + "/heartbeat")
                         .header("X-Forge-Runner-Token", token)
                         .contentType(MediaType.APPLICATION_JSON)

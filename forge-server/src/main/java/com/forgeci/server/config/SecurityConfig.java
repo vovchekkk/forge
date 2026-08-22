@@ -21,10 +21,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Stateless security: JWT bearer tokens for users, X-Forge-Runner-Token for runners.
- * Only register/login/refresh/runner-register/health/OpenAPI are public.
- */
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {

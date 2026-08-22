@@ -7,10 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Append-only structured audit log. Never logs passwords, JWTs or raw tokens —
- * only event names, actor identity and small non-sensitive details.
- */
+
 @Service
 public class AuditService {
 

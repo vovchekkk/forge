@@ -14,11 +14,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Authenticates user principals from a {@code Bearer} access token issued by {@link JwtService}.
- * The principal is the user's UUID; user existence is re-validated so revoked/deleted users
- * lose access immediately even if the token is still within its validity window.
- */
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -48,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         }
                     });
                 } catch (IllegalArgumentException ignored) {
-                    // malformed subject -> leave unauthenticated
+                    
                 }
             }
         }

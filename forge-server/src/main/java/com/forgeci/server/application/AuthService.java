@@ -81,7 +81,7 @@ public class AuthService {
         return issueTokens(user, rotated.rawToken());
     }
 
-    /** Log out by revoking the presented refresh token family. */
+    
     @Transactional
     public void logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {

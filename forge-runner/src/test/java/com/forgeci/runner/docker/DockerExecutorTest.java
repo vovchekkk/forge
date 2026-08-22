@@ -17,11 +17,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * Integration test against a real Docker daemon. The runner requires Docker
- * anyway, so the container orchestration is verified end to end. When no
- * daemon is reachable the tests are skipped rather than failed.
- */
+
 class DockerExecutorTest {
 
     private static final String IMAGE = "alpine:3.20";
@@ -60,7 +56,7 @@ class DockerExecutorTest {
             try {
                 dockerClient.close();
             } catch (Exception ignore) {
-                // best-effort shutdown
+                
             }
         }
     }
@@ -121,8 +117,8 @@ class DockerExecutorTest {
 
     @Test
     void killsContainerWhenCancellationRequested() throws Exception {
-        // Cancel after the container is definitely running to avoid a race
-        // between startContainer and the first inspection.
+        
+        
         java.util.concurrent.atomic.AtomicBoolean cancel = new java.util.concurrent.atomic.AtomicBoolean(false);
         java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newSingleThreadExecutor();
         pool.submit(() -> {
