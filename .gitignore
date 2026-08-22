@@ -32,16 +32,8 @@ target/
 *.iml
 
 # Local tooling: daemon state, workspaces, vector indexes
-.claude-flow/
-.opencode/
-.swarm/
-graphify-out/
 .gitattributes
 *.db
-*.db-shm
-*.db-wal
-ruvector.db
-claude-flow.config.json
 data/
 
 # Deploy secrets (copy .env.example to .env)
